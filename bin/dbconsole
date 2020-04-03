@@ -1,0 +1,2 @@
+#!/bin/sh
+exec psql --dbname postgres://localhost/scoutges_development "${@}"
