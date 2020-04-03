@@ -90,7 +90,7 @@ authenticatedView model =
 
 registerOrSignInFormView : Maybe String -> Model -> Element Msg
 registerOrSignInFormView reason model =
-    column [ spacing 16, centerX, Background.color gray7, height (fill |> Element.minimum 320) ]
+    column [ spacing 16, centerX, Background.color gray7, height (fill |> Element.minimum 320 |> Element.maximum 320) ]
         [ el [ width fill, Region.heading 1, Font.size 32, Background.color gray6, Element.paddingXY 32 8 ] (text "Sign in or Register")
         , el [ width (fill |> Element.minimum 400 |> Element.maximum 480) ] (emailPasswordFormView model)
         ]
@@ -98,7 +98,7 @@ registerOrSignInFormView reason model =
 
 authenticatingView : Model -> Element Msg
 authenticatingView model =
-    column [ centerX, Background.color gray7, height (fill |> Element.minimum 320) ]
+    column [ centerX, Background.color gray7, height (fill |> Element.minimum 320 |> Element.maximum 320) ]
         [ el [ width fill, Region.heading 1, Font.size 32, Background.color gray6, Element.paddingXY 32 8 ] (text "Sign in or Register")
         , el [ height fill, width (fill |> Element.minimum 400 |> Element.maximum 480) ] spinner
         ]
