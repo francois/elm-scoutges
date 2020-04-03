@@ -1,0 +1,4 @@
+%syntax-version=1.0.0
+%project=scoutges
+
+schemas/api 2020-04-03T21:31:44Z François Beausoleil <francois@teksol.info> # Namespace where accessible objects can be put
