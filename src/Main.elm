@@ -33,6 +33,17 @@ type AuthenticationState
     | AuthenticationFailure
 
 
+type alias RegistrationResponse =
+    { token : String
+    }
+
+
+type alias RegistrationRequest =
+    { email : String
+    , password : String
+    }
+
+
 type alias AuthenticationResponse =
     { token : String
     }
@@ -58,6 +69,7 @@ type Msg
     | SetPassword String
     | Authenticate
     | AuthenticateResult (Result Http.Error AuthenticationResponse)
+    | RegisterResult (Result Http.Error RegistrationResponse)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -83,6 +95,12 @@ update msg model =
             ( { model | authenticationState = Authenticated resp.token }, Cmd.none )
 
         AuthenticateResult (Err resp) ->
+            ( { model | authenticationState = AuthenticationFailure }, Cmd.none )
+
+        RegisterResult (Ok resp) ->
+            ( { model | authenticationState = Authenticated resp.token }, Cmd.none )
+
+        RegisterResult (Err resp) ->
             ( { model | authenticationState = AuthenticationFailure }, Cmd.none )
 
 
@@ -268,8 +286,30 @@ authenticationResponseDecoder =
     Decode.map AuthenticationResponse (Decode.field "token" Decode.string)
 
 
+registrationRequestEncoder : RegistrationRequest -> Encode.Value
+registrationRequestEncoder req =
+    Encode.object
+        [ ( "email", Encode.string req.email )
+        , ( "password", Encode.string req.password )
+        ]
+
+
+registrationResponseDecoder : Decode.Decoder RegistrationResponse
+registrationResponseDecoder =
+    Decode.map RegistrationResponse (Decode.field "token" Decode.string)
+
+
 
 ---- Commands ----
+
+
+register : RegistrationRequest -> Cmd Msg
+register req =
+    Http.post
+        { url = "/rpc/register"
+        , body = Http.jsonBody (registrationRequestEncoder req)
+        , expect = Http.expectJson RegisterResult registrationResponseDecoder
+        }
 
 
 authenticate : AuthenticationRequest -> Cmd Msg
