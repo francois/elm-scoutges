@@ -6,12 +6,12 @@ extensions/citext 2020-04-03T21:46:00Z François Beausoleil <francois@teksol.inf
 extensions/pgcrypto 2020-04-03T21:48:00Z François Beausoleil <francois@teksol.info> # Add functions to manage user passwords and UUID
 extensions/pgjwt 2020-04-04T03:20:07Z François Beausoleil <francois@teksol.info> # Add extension to sign and verify JavaScript Web Tokens
 tables/users [extensions/citext] 2020-04-03T21:43:22Z François Beausoleil <francois@teksol.info> # Record users and their DB role
-grants/users [tables/users] 2020-04-04T15:54:34Z François Beausoleil <francois@teksol.info> # The list of grants on the users table
+grants/tables/users [tables/users] 2020-04-04T15:54:34Z François Beausoleil <francois@teksol.info> # The list of grants on the users table
 triggers/encrypt_users_password 2020-04-04T14:56:09Z François Beausoleil <francois@teksol.info> # Automatically encrypt user passwords on write to the users table
 triggers/canonicalize_user_email [tables/users] 2020-04-04T16:03:45Z François Beausoleil <francois@teksol.info> # Force all emails to canonicalize to the same lower-case version, so that we don't need to worry about that in the authentication flow
 constraints/enforce_existence_of_users_pguser 2020-04-04T15:08:52Z François Beausoleil <francois@teksol.info> # PG does not allow a foreign key reference to pg_roles, so we fake a constraint violation using a constraint trigger
 tables/active_jwt_tokens [tables/users extensions/pgcrypto] 2020-04-04T15:41:44Z François Beausoleil <francois@teksol.info> # Record active tokens, in order to allow tokens to be invalidated
-grants/active_jwt_tokens [tables/active_jwt_tokens] 2020-04-04T15:54:49Z François Beausoleil <francois@teksol.info> # The list of grants on the active_jwt_tokens table
+grants/tables/active_jwt_tokens [tables/active_jwt_tokens] 2020-04-04T15:54:49Z François Beausoleil <francois@teksol.info> # The list of grants on the active_jwt_tokens table
 functions/generate_jwt_token [extensions/pgcrypto tables/active_jwt_tokens] 2020-04-04T15:58:52Z François Beausoleil <francois@teksol.info> # A helper function for public.authenticate(text, text) so that tokens can be registered
 functions/authenticate [tables/active_jwt_tokens] 2020-04-03T23:45:30Z François Beausoleil <francois@teksol.info> # Offer a wqy for anonymous users to authenticate with the system
 grants/schemas/api [schemas/api] 2020-04-04T16:20:48Z François Beausoleil <francois@teksol.info> # Grants for the api schema
