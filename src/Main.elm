@@ -107,17 +107,17 @@ view model =
                 AuthenticationFailure ->
                     registerOrSignInFormView
     in
-    Element.layout [ Font.color gray1, Background.color white, centerX, Element.paddingXY 0 320 ] (body model)
+    Element.layout [ Font.color gray1, Background.color white, centerX ] (body model)
 
 
 authenticatedView : Model -> Element Msg
 authenticatedView model =
-    el [] (text "Authenticated!")
+    el [ centerY, centerX ] (text "Authenticated!")
 
 
 registerOrSignInFormView : Model -> Element Msg
 registerOrSignInFormView model =
-    column [ spacing 16, centerX, Background.color gray7, height (fill |> Element.minimum 352 |> Element.maximum 352) ]
+    column [ spacing 16, centerY, centerX, Background.color gray7, height (fill |> Element.minimum 352 |> Element.maximum 352) ]
         [ el [ width fill, Region.heading 1, Font.size 32, Background.color gray6, Element.paddingXY 32 8 ] (text "Sign in or Register")
         , el [ width (fill |> Element.minimum 400 |> Element.maximum 480) ] (emailPasswordFormView model)
         ]
@@ -125,7 +125,7 @@ registerOrSignInFormView model =
 
 authenticatingView : Model -> Element Msg
 authenticatingView model =
-    column [ centerX, Background.color gray7, height (fill |> Element.minimum 352 |> Element.maximum 352) ]
+    column [ centerY, centerX, Background.color gray7, height (fill |> Element.minimum 352 |> Element.maximum 352) ]
         [ el [ width fill, Region.heading 1, Font.size 32, Background.color gray6, Element.paddingXY 32 8 ] (text "Sign in or Register")
         , el [ height fill, width (fill |> Element.minimum 400 |> Element.maximum 480) ] spinner
         ]
