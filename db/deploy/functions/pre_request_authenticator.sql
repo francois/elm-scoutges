@@ -8,6 +8,11 @@ BEGIN;
   DECLARE
     result boolean;
   BEGIN
+    IF current_setting('request.jwt.claim.jti', true) IS NULL THEN
+      -- Incoming request is made by an anonymous user, always allow anonymous requests
+      RETURN true;
+    END IF;
+
     SELECT true
     INTO result
     FROM public.active_jwt_tokens
