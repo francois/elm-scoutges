@@ -17,3 +17,4 @@ functions/authenticate [tables/active_jwt_tokens] 2020-04-03T23:45:30Z François
 grants/schemas/api [schemas/api] 2020-04-04T16:20:48Z François Beausoleil <francois@teksol.info> # Grants for the api schema
 grants/schemas/public 2020-04-04T16:23:43Z François Beausoleil <francois@teksol.info> # Whitelist operations in the public schema
 functions/pre_request_authenticator [tables/active_jwt_tokens] 2020-04-04T16:40:55Z François Beausoleil <francois@teksol.info> # A function that will run before every PostgREST request and authenticate the incoming JWT
+functions/register [tables/users tables/active_jwt_tokens functions/generate_jwt_token] 2020-04-04T19:33:24Z François Beausoleil <francois@teksol.info> # Enable registration from the frontend
