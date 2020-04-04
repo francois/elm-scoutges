@@ -4,7 +4,7 @@ SET client_min_messages TO 'warning';
 
 BEGIN;
 
-  DROP FUNCTION api.authenticate(text, text);
+  DROP FUNCTION api.sign_in(text, text);
 
 COMMIT;
 

@@ -4,7 +4,7 @@ SET client_min_messages TO 'warning';
 
 BEGIN;
 
-  CREATE OR REPLACE FUNCTION api.authenticate(email text, password text) RETURNS json AS $$
+  CREATE OR REPLACE FUNCTION api.sign_in(email text, password text) RETURNS json AS $$
   DECLARE
     user_email text;
     user_role text;
@@ -14,7 +14,7 @@ BEGIN;
     SELECT users.pguser, users.password, users.email
     INTO user_role, user_pass, user_email
     FROM users
-    WHERE users.email = authenticate.email;
+    WHERE users.email = sign_in.email;
 
     IF user_role IS NULL THEN
       -- To prevent attackers guessing if the email exists or not, we make a for sure
@@ -25,7 +25,7 @@ BEGIN;
       RAISE invalid_password USING message = 'Invalid email or password';
     END IF;
 
-    IF user_pass <> crypt(authenticate.password, user_pass) THEN
+    IF user_pass <> crypt(sign_in.password, user_pass) THEN
       RAISE invalid_password USING message = 'Invalid email or password';
     END IF;
 
@@ -45,9 +45,9 @@ BEGIN;
   END;
   $$ LANGUAGE plpgsql;
 
-  COMMENT ON FUNCTION api.authenticate IS 'The function that permits an anonymous user to become authenticated and receive a JWT claim';
+  COMMENT ON FUNCTION api.sign_in IS 'The function that permits an anonymous user to become authenticated and receive a JWT claim';
 
-  GRANT execute ON FUNCTION api.authenticate TO anonymous;
+  GRANT execute ON FUNCTION api.sign_in TO anonymous;
 
 COMMIT;
 

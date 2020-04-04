@@ -8,7 +8,7 @@ BEGIN;
       id serial not null
     , email text not null unique check(email ~ '^.+@.+[.][a-z]{2,}$')
     , pguser text not null
-    , password text not null check(length(password) >= 8)
+    , password text not null
     , registered_at timestamp with time zone not null default current_timestamp
   );
 

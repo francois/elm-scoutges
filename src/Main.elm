@@ -36,7 +36,7 @@ type AuthenticationState
 
 type AuthMethod
     = Register
-    | Authenticate
+    | SignIn
 
 
 type alias RegistrationResponse =
@@ -50,7 +50,7 @@ type alias RegistrationRequest =
     }
 
 
-type alias AuthenticationResponse =
+type alias SignInResponse =
     { token : String
     }
 
@@ -63,7 +63,7 @@ type alias AuthenticationRequest =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { email = Nothing, password = Nothing, authenticationState = Anonymous, authMethod = Authenticate }, Cmd.none )
+    ( { email = Nothing, password = Nothing, authenticationState = Anonymous, authMethod = SignIn }, Cmd.none )
 
 
 
@@ -75,7 +75,7 @@ type Msg
     | SetPassword String
     | TryAuthenticate
     | TryRegister
-    | AuthenticateResult (Result Http.Error AuthenticationResponse)
+    | SignInResult (Result Http.Error SignInResponse)
     | RegisterResult (Result Http.Error RegistrationResponse)
     | ChangeAuthMethod AuthMethod
 
@@ -109,10 +109,10 @@ update msg model =
                 otherwise ->
                     ( model, Cmd.none )
 
-        AuthenticateResult (Ok resp) ->
+        SignInResult (Ok resp) ->
             ( { model | authenticationState = Authenticated resp.token }, Cmd.none )
 
-        AuthenticateResult (Err resp) ->
+        SignInResult (Err resp) ->
             ( { model | authenticationState = AuthenticationFailure }, Cmd.none )
 
         RegisterResult (Ok resp) ->
@@ -180,13 +180,13 @@ signInOrAuthenticateTabView model =
                 Register ->
                     ( gray6, gray7 )
 
-                Authenticate ->
+                SignIn ->
                     ( gray7, gray6 )
     in
     row [ width fill, Region.heading 1, Font.size 32, Background.color gray6 ]
         [ el [ padding 8, width (Element.fillPortion 1), Background.color bgCol1 ]
             (Input.button [ centerX, width fill, height fill ]
-                { onPress = Just (ChangeAuthMethod Authenticate)
+                { onPress = Just (ChangeAuthMethod SignIn)
                 , label = text "Sign In"
                 }
             )
@@ -223,7 +223,7 @@ emailPasswordFormView model =
                 Register ->
                     ( "Register", TryRegister )
 
-                Authenticate ->
+                SignIn ->
                     ( "Sign In", TryAuthenticate )
     in
     column [ padding 8, spacing 8, width fill ]
@@ -346,9 +346,9 @@ authenticationRequestEncoder req =
         ]
 
 
-authenticationResponseDecoder : Decode.Decoder AuthenticationResponse
+authenticationResponseDecoder : Decode.Decoder SignInResponse
 authenticationResponseDecoder =
-    Decode.map AuthenticationResponse (Decode.field "token" Decode.string)
+    Decode.map SignInResponse (Decode.field "token" Decode.string)
 
 
 registrationRequestEncoder : RegistrationRequest -> Encode.Value
@@ -371,7 +371,7 @@ registrationResponseDecoder =
 register : RegistrationRequest -> Cmd Msg
 register req =
     Http.post
-        { url = "/rpc/register"
+        { url = "/api/rpc/register"
         , body = Http.jsonBody (registrationRequestEncoder req)
         , expect = Http.expectJson RegisterResult registrationResponseDecoder
         }
@@ -380,9 +380,9 @@ register req =
 authenticate : AuthenticationRequest -> Cmd Msg
 authenticate req =
     Http.post
-        { url = "/rpc/authenticate"
+        { url = "/api/rpc/sign_in"
         , body = Http.jsonBody (authenticationRequestEncoder req)
-        , expect = Http.expectJson AuthenticateResult authenticationResponseDecoder
+        , expect = Http.expectJson SignInResult authenticationResponseDecoder
         }
 
 
