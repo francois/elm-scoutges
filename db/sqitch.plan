@@ -4,4 +4,6 @@
 schemas/api 2020-04-03T21:31:44Z François Beausoleil <francois@teksol.info> # Namespace where accessible objects can be put
 extensions/citext 2020-04-03T21:46:00Z François Beausoleil <francois@teksol.info> # Support text-insensitive queries, such as email
 extensions/pgcrypto 2020-04-03T21:48:00Z François Beausoleil <francois@teksol.info> # Add functions to manage user passwords and UUID
+extensions/pgjwt 2020-04-04T03:20:07Z François Beausoleil <francois@teksol.info> # Add extension to sign and verify JavaScript Web Tokens
 tables/users 2020-04-03T21:43:22Z François Beausoleil <francois@teksol.info> # Record users and their DB role
+functions/authenticate 2020-04-03T23:45:30Z François Beausoleil <francois@teksol.info> # Offer a wqy for anonymous users to authenticate with the system
