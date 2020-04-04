@@ -6,6 +6,7 @@ SET client_min_messages TO 'warning';
 BEGIN;
 
   GRANT SELECT, INSERT ON public.users TO anonymous;
+  GRANT USAGE ON SEQUENCE users_id_seq TO anonymous;
 
 COMMIT;
 

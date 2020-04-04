@@ -23,6 +23,7 @@ type alias Model =
     { email : Maybe String
     , password : Maybe String
     , authenticationState : AuthenticationState
+    , authMethod : AuthMethod
     }
 
 
@@ -31,6 +32,11 @@ type AuthenticationState
     | Anonymous
     | Authenticating
     | AuthenticationFailure
+
+
+type AuthMethod
+    = Register
+    | Authenticate
 
 
 type alias RegistrationResponse =
@@ -57,7 +63,7 @@ type alias AuthenticationRequest =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { email = Nothing, password = Nothing, authenticationState = Anonymous }, Cmd.none )
+    ( { email = Nothing, password = Nothing, authenticationState = Anonymous, authMethod = Authenticate }, Cmd.none )
 
 
 
@@ -67,9 +73,11 @@ init =
 type Msg
     = SetEmail String
     | SetPassword String
-    | Authenticate
+    | TryAuthenticate
+    | TryRegister
     | AuthenticateResult (Result Http.Error AuthenticationResponse)
     | RegisterResult (Result Http.Error RegistrationResponse)
+    | ChangeAuthMethod AuthMethod
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -81,11 +89,21 @@ update msg model =
         SetEmail str ->
             ( { model | email = Just str }, Cmd.none )
 
-        Authenticate ->
+        TryAuthenticate ->
             case ( model.email, model.password ) of
                 ( Just email, Just pass ) ->
                     ( { model | authenticationState = Authenticating }
                     , authenticate (AuthenticationRequest email pass)
+                    )
+
+                otherwise ->
+                    ( model, Cmd.none )
+
+        TryRegister ->
+            case ( model.email, model.password ) of
+                ( Just email, Just pass ) ->
+                    ( { model | authenticationState = Authenticating }
+                    , register (RegistrationRequest email pass)
                     )
 
                 otherwise ->
@@ -98,10 +116,15 @@ update msg model =
             ( { model | authenticationState = AuthenticationFailure }, Cmd.none )
 
         RegisterResult (Ok resp) ->
-            ( { model | authenticationState = Authenticated resp.token }, Cmd.none )
+            Debug.log "register ok"
+                ( { model | authenticationState = Authenticated resp.token }, Cmd.none )
 
         RegisterResult (Err resp) ->
-            ( { model | authenticationState = AuthenticationFailure }, Cmd.none )
+            Debug.log "register err"
+                ( { model | authenticationState = AuthenticationFailure }, Cmd.none )
+
+        ChangeAuthMethod authMethod ->
+            ( { model | authMethod = authMethod }, Cmd.none )
 
 
 
@@ -136,7 +159,7 @@ authenticatedView model =
 registerOrSignInFormView : Model -> Element Msg
 registerOrSignInFormView model =
     column [ spacing 16, centerY, centerX, Background.color gray7, height (fill |> Element.minimum 352 |> Element.maximum 352) ]
-        [ el [ width fill, Region.heading 1, Font.size 32, Background.color gray6, Element.paddingXY 32 8 ] (text "Sign in or Register")
+        [ signInOrAuthenticateTabView model
         , el [ width (fill |> Element.minimum 400 |> Element.maximum 480) ] (emailPasswordFormView model)
         ]
 
@@ -144,8 +167,35 @@ registerOrSignInFormView model =
 authenticatingView : Model -> Element Msg
 authenticatingView model =
     column [ centerY, centerX, Background.color gray7, height (fill |> Element.minimum 352 |> Element.maximum 352) ]
-        [ el [ width fill, Region.heading 1, Font.size 32, Background.color gray6, Element.paddingXY 32 8 ] (text "Sign in or Register")
+        [ signInOrAuthenticateTabView model
         , el [ height fill, width (fill |> Element.minimum 400 |> Element.maximum 480) ] spinner
+        ]
+
+
+signInOrAuthenticateTabView : Model -> Element Msg
+signInOrAuthenticateTabView model =
+    let
+        ( bgCol1, bgCol2 ) =
+            case model.authMethod of
+                Register ->
+                    ( gray6, gray7 )
+
+                Authenticate ->
+                    ( gray7, gray6 )
+    in
+    row [ width fill, Region.heading 1, Font.size 32, Background.color gray6 ]
+        [ el [ padding 8, width (Element.fillPortion 1), Background.color bgCol1 ]
+            (Input.button [ centerX, width fill, height fill ]
+                { onPress = Just (ChangeAuthMethod Authenticate)
+                , label = text "Sign In"
+                }
+            )
+        , el [ padding 8, width (Element.fillPortion 1), Background.color bgCol2 ]
+            (Input.button [ centerX, width fill, height fill ]
+                { onPress = Just (ChangeAuthMethod Register)
+                , label = text "Register"
+                }
+            )
         ]
 
 
@@ -167,9 +217,17 @@ emailPasswordFormView model =
 
                 otherwise ->
                     el [] (text "")
+
+        ( buttonLabel, msg ) =
+            case model.authMethod of
+                Register ->
+                    ( "Register", TryRegister )
+
+                Authenticate ->
+                    ( "Sign In", TryAuthenticate )
     in
     column [ padding 8, spacing 8, width fill ]
-        [ Input.email [ onEnter Authenticate ]
+        [ Input.email [ onEnter TryAuthenticate ]
             { onChange = SetEmail
             , text =
                 case model.email of
@@ -181,7 +239,7 @@ emailPasswordFormView model =
             , placeholder = Nothing
             , label = Input.labelAbove [ alignLeft, Element.pointer ] (text "Email")
             }
-        , Input.currentPassword [ onEnter Authenticate ]
+        , Input.currentPassword [ onEnter TryAuthenticate ]
             { onChange = SetPassword
             , show = False
             , text =
@@ -197,8 +255,15 @@ emailPasswordFormView model =
         , authenticationMessage
         , el [ Element.paddingXY 0 16, width fill ]
             (Input.button [ centerX ]
-                { label = el [ Background.color callToActionColor, padding 16, Font.color white ] (text "Sign in or Register")
-                , onPress = Just Authenticate
+                { label =
+                    el
+                        [ Background.color callToActionColor
+                        , padding 16
+                        , Font.color white
+                        , width (fill |> Element.minimum 240 |> Element.maximum 240)
+                        ]
+                        (text buttonLabel)
+                , onPress = Just msg
                 }
             )
         ]

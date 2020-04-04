@@ -7,7 +7,7 @@ BEGIN;
   CREATE TABLE public.users(
       id serial not null
     , email text not null unique check(email ~ '^.+@.+[.][a-z]{2,}$')
-    , pguser text not null unique
+    , pguser text not null
     , password text not null check(length(password) >= 8)
     , registered_at timestamp with time zone not null default current_timestamp
   );

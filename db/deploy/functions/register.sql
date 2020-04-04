@@ -17,7 +17,7 @@ BEGIN;
     SELECT sign(row_to_json(r), current_setting('jwt.secret')) AS token
     FROM (
         SELECT
-            user_role AS role
+            'authenticated' AS role
           , email AS sub
           , extract(epoch from current_timestamp + interval '1 hour')::integer AS exp
           , extract(epoch from current_timestamp)::integer AS iat
@@ -30,7 +30,9 @@ BEGIN;
   END
   $$ LANGUAGE plpgsql;
 
-  GRANT EXECUTE ON FUNCTION api.register TO anonymous, authenticated;
+  COMMENT ON FUNCTION api.register IS 'The method through which people can register to be users of the app';
+
+  GRANT execute ON FUNCTION api.register TO anonymous;
 
 COMMIT;
 
