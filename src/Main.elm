@@ -10,7 +10,9 @@ import Element.Input as Input
 import Element.Region as Region
 import Html exposing (Html)
 import Html.Events
+import Http
 import Json.Decode as Decode
+import Json.Encode as Encode
 
 
 
@@ -25,10 +27,21 @@ type alias Model =
 
 
 type AuthenticationState
-    = Authenticated
+    = Authenticated String
     | Anonymous
     | Authenticating
-    | AuthenticationFailure String
+    | AuthenticationFailure
+
+
+type alias AuthenticationResponse =
+    { token : String
+    }
+
+
+type alias AuthenticationRequest =
+    { email : String
+    , password : String
+    }
 
 
 init : ( Model, Cmd Msg )
@@ -44,6 +57,7 @@ type Msg
     = SetEmail String
     | SetPassword String
     | Authenticate
+    | AuthenticateResult (Result Http.Error AuthenticationResponse)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -56,7 +70,20 @@ update msg model =
             ( { model | email = Just str }, Cmd.none )
 
         Authenticate ->
-            ( { model | authenticationState = Authenticating }, Cmd.none )
+            case ( model.email, model.password ) of
+                ( Just email, Just pass ) ->
+                    ( { model | authenticationState = Authenticating }
+                    , authenticate (AuthenticationRequest email pass)
+                    )
+
+                otherwise ->
+                    ( model, Cmd.none )
+
+        AuthenticateResult (Ok resp) ->
+            ( { model | authenticationState = Authenticated resp.token }, Cmd.none )
+
+        AuthenticateResult (Err resp) ->
+            ( { model | authenticationState = AuthenticationFailure }, Cmd.none )
 
 
 
@@ -69,16 +96,16 @@ view model =
         body =
             case model.authenticationState of
                 Anonymous ->
-                    registerOrSignInFormView Nothing
+                    registerOrSignInFormView
 
-                Authenticated ->
+                Authenticated _ ->
                     authenticatedView
 
                 Authenticating ->
                     authenticatingView
 
-                AuthenticationFailure reason ->
-                    registerOrSignInFormView (Just reason)
+                AuthenticationFailure ->
+                    registerOrSignInFormView
     in
     Element.layout [ Font.color gray1, Background.color white, centerX, Element.paddingXY 0 320 ] (body model)
 
@@ -88,8 +115,8 @@ authenticatedView model =
     el [] (text "Authenticated!")
 
 
-registerOrSignInFormView : Maybe String -> Model -> Element Msg
-registerOrSignInFormView reason model =
+registerOrSignInFormView : Model -> Element Msg
+registerOrSignInFormView model =
     column [ spacing 16, centerX, Background.color gray7, height (fill |> Element.minimum 320 |> Element.maximum 320) ]
         [ el [ width fill, Region.heading 1, Font.size 32, Background.color gray6, Element.paddingXY 32 8 ] (text "Sign in or Register")
         , el [ width (fill |> Element.minimum 400 |> Element.maximum 480) ] (emailPasswordFormView model)
@@ -212,6 +239,36 @@ onEnter msg =
                     )
             )
         )
+
+
+
+---- JSON Encoders & Decoders ----
+
+
+authenticationRequestEncoder : AuthenticationRequest -> Encode.Value
+authenticationRequestEncoder req =
+    Encode.object
+        [ ( "email", Encode.string req.email )
+        , ( "password", Encode.string req.password )
+        ]
+
+
+authenticationResponseDecoder : Decode.Decoder AuthenticationResponse
+authenticationResponseDecoder =
+    Decode.map AuthenticationResponse (Decode.field "token" Decode.string)
+
+
+
+---- Commands ----
+
+
+authenticate : AuthenticationRequest -> Cmd Msg
+authenticate req =
+    Http.post
+        { url = "/rpc/authenticate"
+        , body = Http.jsonBody (authenticationRequestEncoder req)
+        , expect = Http.expectJson AuthenticateResult authenticationResponseDecoder
+        }
 
 
 
