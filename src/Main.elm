@@ -117,7 +117,7 @@ authenticatedView model =
 
 registerOrSignInFormView : Model -> Element Msg
 registerOrSignInFormView model =
-    column [ spacing 16, centerX, Background.color gray7, height (fill |> Element.minimum 320 |> Element.maximum 320) ]
+    column [ spacing 16, centerX, Background.color gray7, height (fill |> Element.minimum 352 |> Element.maximum 352) ]
         [ el [ width fill, Region.heading 1, Font.size 32, Background.color gray6, Element.paddingXY 32 8 ] (text "Sign in or Register")
         , el [ width (fill |> Element.minimum 400 |> Element.maximum 480) ] (emailPasswordFormView model)
         ]
@@ -125,7 +125,7 @@ registerOrSignInFormView model =
 
 authenticatingView : Model -> Element Msg
 authenticatingView model =
-    column [ centerX, Background.color gray7, height (fill |> Element.minimum 320 |> Element.maximum 320) ]
+    column [ centerX, Background.color gray7, height (fill |> Element.minimum 352 |> Element.maximum 352) ]
         [ el [ width fill, Region.heading 1, Font.size 32, Background.color gray6, Element.paddingXY 32 8 ] (text "Sign in or Register")
         , el [ height fill, width (fill |> Element.minimum 400 |> Element.maximum 480) ] spinner
         ]
@@ -141,6 +141,15 @@ spinner =
 
 emailPasswordFormView : Model -> Element Msg
 emailPasswordFormView model =
+    let
+        authenticationMessage =
+            case model.authenticationState of
+                AuthenticationFailure ->
+                    el [ centerX, Font.color (rgb255 255 0 0) ] (text "Invalid username or password")
+
+                otherwise ->
+                    el [] (text "")
+    in
     column [ padding 8, spacing 8, width fill ]
         [ Input.email [ onEnter Authenticate ]
             { onChange = SetEmail
@@ -167,6 +176,7 @@ emailPasswordFormView model =
             , placeholder = Nothing
             , label = Input.labelAbove [ alignLeft, Element.pointer ] (text "Password")
             }
+        , authenticationMessage
         , el [ Element.paddingXY 0 16, width fill ]
             (Input.button [ centerX ]
                 { label = el [ Background.color callToActionColor, padding 16, Font.color white ] (text "Sign in or Register")
