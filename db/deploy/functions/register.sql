@@ -26,7 +26,7 @@ BEGIN;
     ) AS r
     INTO result;
 
-    RETURN ('{"token":"' || result.token || '"}')::json;
+    RETURN result;
   END
   $$ LANGUAGE plpgsql;
 
