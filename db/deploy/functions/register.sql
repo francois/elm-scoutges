@@ -14,7 +14,7 @@ BEGIN;
     INSERT INTO public.users(email, password, pguser)
     VALUES(register.email, register.password, 'authenticated');
 
-    SELECT sign(row_to_json(r), current_setting('jwt.secret')) AS token
+    SELECT jwt_sign(row_to_json(r), current_setting('jwt.secret')) AS token
     FROM (
         SELECT
             'authenticated' AS role

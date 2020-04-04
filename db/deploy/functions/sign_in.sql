@@ -29,7 +29,7 @@ BEGIN;
       RAISE invalid_password USING message = 'Invalid email or password';
     END IF;
 
-    SELECT sign(row_to_json(r), current_setting('jwt.secret')) AS token
+    SELECT jwt_sign(row_to_json(r), current_setting('jwt.secret')) AS token
     FROM (
         SELECT
             user_role AS role
