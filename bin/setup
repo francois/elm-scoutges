@@ -1,0 +1,11 @@
+#!/bin/sh
+echo >&2 "Installing system dependencies using Homebrew"
+brew install nginx overmind postgresql postgrest yarn
+
+echo >&2 "Installing Elm & dependencies using yarn"
+yarn global add create-elm-app elm-test elm-format elm-oracle
+
+echo >&2 ""
+echo >&2 ""
+echo >&2 "All done! You can start the development server by running: bin/start-the-world"
+echo >&2 "Visit http://localhost:3000/ to start playing with the app"

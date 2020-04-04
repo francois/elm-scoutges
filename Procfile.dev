@@ -1,0 +1,4 @@
+elm: elm-app start --no-browser
+postgrest: sleep 2 && postgrest postgrest.conf
+postgresql: postmaster -D db/cluster
+nginx: nginx -c "${PWD}/nginx.conf"
