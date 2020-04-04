@@ -4,14 +4,15 @@ SET client_min_messages TO 'warning';
 
 BEGIN;
 
-  CREATE OR REPLACE FUNCTION public.authenticate(email text, password text) RETURNS text AS $$
+  CREATE OR REPLACE FUNCTION api.authenticate(email text, password text) RETURNS json AS $$
   DECLARE
+    user_email text;
     user_role text;
     user_pass text;
     result public.jwt_token;
   BEGIN
-    SELECT pguser, password
-    INTO user_role, user_pass
+    SELECT users.pguser, users.password, users.email
+    INTO user_role, user_pass, user_email
     FROM users
     WHERE users.email = authenticate.email;
 
@@ -32,18 +33,21 @@ BEGIN;
     FROM (
         SELECT
             user_role AS role
-          , email AS email
+          , email AS sub
           , extract(epoch from current_timestamp + interval '1 hour')::integer AS exp
+          , extract(epoch from current_timestamp)::integer AS iat
+          , 'scoutges' AS aud
+          , public.generate_jwt_token(user_email) AS jti
     ) AS r
     INTO result;
 
-    RETURN result;
+    RETURN ('{"token":"' || result.token || '"}')::json;
   END;
   $$ LANGUAGE plpgsql;
 
-  COMMENT ON FUNCTION public.authenticate IS 'The function that permits an anonymous user to become authenticated and receive a JWT claim';
+  COMMENT ON FUNCTION api.authenticate IS 'The function that permits an anonymous user to become authenticated and receive a JWT claim';
 
-  GRANT execute ON FUNCTION public.authenticate TO anonymous;
+  GRANT execute ON FUNCTION api.authenticate TO anonymous;
 
 COMMIT;
 
