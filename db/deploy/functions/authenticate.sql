@@ -10,7 +10,7 @@ BEGIN;
     user_pass text;
     result public.jwt_token;
   BEGIN
-    SELECT pguser, encrypted_password
+    SELECT pguser, password
     INTO user_role, user_pass
     FROM users
     WHERE users.email = authenticate.email;
