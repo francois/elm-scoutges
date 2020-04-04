@@ -2,10 +2,9 @@
 %project=scoutges
 
 schemas/api 2020-04-03T21:31:44Z François Beausoleil <francois@teksol.info> # Namespace where accessible objects can be put
-extensions/citext 2020-04-03T21:46:00Z François Beausoleil <francois@teksol.info> # Support text-insensitive queries, such as email
 extensions/pgcrypto 2020-04-03T21:48:00Z François Beausoleil <francois@teksol.info> # Add functions to manage user passwords and UUID
 extensions/pgjwt 2020-04-04T03:20:07Z François Beausoleil <francois@teksol.info> # Add extension to sign and verify JavaScript Web Tokens
-tables/users [extensions/citext] 2020-04-03T21:43:22Z François Beausoleil <francois@teksol.info> # Record users and their DB role
+tables/users 2020-04-03T21:43:22Z François Beausoleil <francois@teksol.info> # Record users and their DB role
 grants/tables/users [tables/users] 2020-04-04T15:54:34Z François Beausoleil <francois@teksol.info> # The list of grants on the users table
 triggers/encrypt_users_password 2020-04-04T14:56:09Z François Beausoleil <francois@teksol.info> # Automatically encrypt user passwords on write to the users table
 triggers/canonicalize_user_email [tables/users] 2020-04-04T16:03:45Z François Beausoleil <francois@teksol.info> # Force all emails to canonicalize to the same lower-case version, so that we don't need to worry about that in the authentication flow
