@@ -7,4 +7,5 @@ extensions/pgcrypto 2020-04-03T21:48:00Z François Beausoleil <francois@teksol.i
 extensions/pgjwt 2020-04-04T03:20:07Z François Beausoleil <francois@teksol.info> # Add extension to sign and verify JavaScript Web Tokens
 tables/users 2020-04-03T21:43:22Z François Beausoleil <francois@teksol.info> # Record users and their DB role
 triggers/encrypt_users_password 2020-04-04T14:56:09Z François Beausoleil <francois@teksol.info> # Automatically encrypt user passwords on write to the users table
+constraints/enforce_existence_of_users_pguser 2020-04-04T15:08:52Z François Beausoleil <francois@teksol.info> # PG does not allow a foreign key reference to pg_roles, so we fake a constraint violation using a constraint trigger
 functions/authenticate 2020-04-03T23:45:30Z François Beausoleil <francois@teksol.info> # Offer a wqy for anonymous users to authenticate with the system
