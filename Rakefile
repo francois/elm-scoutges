@@ -39,9 +39,17 @@ end
 namespace :spec do
   desc "Runs the PostgreSQL tests"
   task :db do
-    # sh "dropdb scoutges_test || exit 0"
-    # sh "createdb scoutges_test"
-    sh "sqitch deploy --quiet --target test"
+    dev_status = Kernel.open("|sqitch status --target development").read.split("\n")
+    dev_change = dev_status.grep(/Change:/)
+
+    test_status = Kernel.open("|sqitch status --target test").read.split("\n")
+    test_change = test_status.grep(/Change:/)
+
+    if dev_change != test_change
+      sh "dropdb scoutges_test || exit 0"
+      sh "createdb scoutges_test"
+      sh "sqitch deploy --quiet --target test"
+    end
 
     sh ["psql", "--no-psqlrc", "--quiet", "--dbname", "postgresql://localhost/scoutges_test", "--file", "spec/db/_setup.sql"].shelljoin
 
