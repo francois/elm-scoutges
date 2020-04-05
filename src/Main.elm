@@ -27,8 +27,12 @@ type alias Model =
     }
 
 
+type alias JwtToken =
+    String
+
+
 type AuthenticationState
-    = Authenticated String
+    = Authenticated JwtToken
     | Anonymous
     | Authenticating
     | AuthenticationFailure
