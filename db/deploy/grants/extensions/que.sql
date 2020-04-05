@@ -9,9 +9,12 @@ BEGIN;
   GRANT INSERT ON TABLE que_jobs, que_values TO anonymous, authenticated, postgrest;
   GRANT INSERT ON TABLE que_lockers TO postgrest;
   GRANT SELECT, DELETE ON TABLE que_jobs, que_lockers TO postgrest;
+  GRANT USAGE ON SEQUENCE que_jobs_id_seq TO anonymous, authenticated, postgrest;
 
   REVOKE ALL PRIVILEGES ON FUNCTION que_validate_tags(jsonb), que_determine_job_state(public.que_jobs) FROM PUBLIC;
-  GRANT EXECUTE ON FUNCTION que_validate_tags(jsonb), que_determine_job_state(public.que_jobs) TO postgrest;
+  GRANT EXECUTE ON FUNCTION que_validate_tags(jsonb), que_determine_job_state(public.que_jobs) TO anonymous, authenticated, postgrest;
+
+  GRANT SELECT ON TABLE que_lockers TO anonymous, authenticated, postgrest;
 COMMIT;
 
 -- vim: expandtab shiftwidth=2

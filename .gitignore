@@ -15,3 +15,6 @@ node_modules
 
 # PostgreSQL database cluster
 db/cluster
+
+# Log files
+log
