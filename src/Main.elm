@@ -261,9 +261,9 @@ emailPasswordFormView model =
             (Input.button [ centerX ]
                 { label =
                     el
-                        [ Background.color callToActionColor
+                        [ Background.color callToActionBackgroundColor
+                        , Font.color callToActionTextColor
                         , padding 16
-                        , Font.color white
                         , width (fill |> Element.minimum 240 |> Element.maximum 240)
                         ]
                         (text buttonLabel)
@@ -273,7 +273,11 @@ emailPasswordFormView model =
         ]
 
 
-callToActionColor =
+callToActionTextColor =
+    white
+
+
+callToActionBackgroundColor =
     rgb255 32 32 240
 
 
