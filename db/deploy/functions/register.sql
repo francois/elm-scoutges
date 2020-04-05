@@ -14,6 +14,9 @@ BEGIN;
     INSERT INTO public.users(email, password, pguser)
     VALUES(register.email, register.password, 'authenticated');
 
+    INSERT INTO public.que_jobs(job_class, job_args)
+    VALUES('Scoutges::Jobs::SendWelcomeEmail', json_build_object('email', register.email));
+
     SELECT jwt_sign(row_to_json(r), current_setting('jwt.secret')) AS token
     FROM (
         SELECT
