@@ -77,8 +77,8 @@ init =
 type Msg
     = SetEmail String
     | SetPassword String
-    | TryAuthenticate
-    | TryRegister
+    | RunSignIn
+    | RunRegister
     | SignInResult (Result Http.Error SignInResponse)
     | RegisterResult (Result Http.Error RegistrationResponse)
     | ChangeAuthMethod AuthMethod
@@ -93,17 +93,17 @@ update msg model =
         SetEmail str ->
             ( { model | email = Just str }, Cmd.none )
 
-        TryAuthenticate ->
+        RunSignIn ->
             case ( model.email, model.password ) of
                 ( Just email, Just pass ) ->
                     ( { model | authenticationState = Authenticating }
-                    , authenticate (AuthenticationRequest email pass)
+                    , sign_in (AuthenticationRequest email pass)
                     )
 
                 otherwise ->
                     ( model, Cmd.none )
 
-        TryRegister ->
+        RunRegister ->
             case ( model.email, model.password ) of
                 ( Just email, Just pass ) ->
                     ( { model | authenticationState = Authenticating }
@@ -225,10 +225,10 @@ emailPasswordFormView model =
         ( buttonLabel, msg ) =
             case model.authMethod of
                 Register ->
-                    ( "Register", TryRegister )
+                    ( "Register", RunRegister )
 
                 SignIn ->
-                    ( "Sign In", TryAuthenticate )
+                    ( "Sign In", RunSignIn )
     in
     column [ padding 8, spacing 8, width fill ]
         [ Input.email [ onEnter msg ]
@@ -381,8 +381,8 @@ register req =
         }
 
 
-authenticate : AuthenticationRequest -> Cmd Msg
-authenticate req =
+sign_in : AuthenticationRequest -> Cmd Msg
+sign_in req =
     Http.post
         { url = "/api/rpc/sign_in"
         , body = Http.jsonBody (authenticationRequestEncoder req)
