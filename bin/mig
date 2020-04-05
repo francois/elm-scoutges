@@ -1,0 +1,36 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "bundler"
+Bundler.require :tools
+
+require "find"
+
+def usage
+  STDERR.puts "Finds a set of migrations in db/, then opens them in $EDITOR"
+  STDERR.puts "The set of files that will be opened is found using keywords passed on the command-line"
+  STDERR.puts "For example:"
+  STDERR.puts ""
+  STDERR.puts "  bin/mig dep tab us #=> $EDITOR deploy/tables/users.sql"
+  STDERR.puts "  bin/mig ext pgjwt  #=> $EDITOR */extensions/pgjwt.sql"
+  STDERR.puts "  bin/mig rev        #=> $EDITOR revert/**/*.sql"
+  STDERR.puts ""
+  STDERR.puts "When $EDITOR == \"vim\", the -o option is prepended, so that all files open"
+  STDERR.puts "in separate panes, instead of having to navigate with :next and :previous"
+  exit 1
+end
+
+usage if ARGV.empty?
+
+partials = ARGV
+
+targets = []
+Find.find("db") do |candidate|
+  next unless candidate[/[.]sql\z/]
+  targets << candidate if partials.all?{|str| candidate[str]}
+end
+
+cmd = [ENV.fetch("EDITOR", "vim")]
+cmd << "-o" if cmd[0]["vim"]
+cmd.concat(targets.sort)
+exec(*cmd)
