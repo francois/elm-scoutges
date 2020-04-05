@@ -20,10 +20,8 @@ import Json.Encode as Encode
 
 
 type alias Model =
-    { email : Maybe String
-    , password : Maybe String
+    { formState : FormState
     , authenticationState : AuthenticationState
-    , authMethod : AuthMethod
     }
 
 
@@ -32,15 +30,15 @@ type alias JwtToken =
 
 
 type AuthenticationState
-    = Authenticated JwtToken
-    | Anonymous
-    | Authenticating
-    | AuthenticationFailure
+    = Unknown
+    | InProgress
+    | Failed
+    | Authenticated JwtToken
 
 
-type AuthMethod
-    = Register
-    | SignIn
+type FormState
+    = FillingRegistrationForm RegistrationRequest
+    | FillingSignInForm SignInRequest
 
 
 type alias RegistrationResponse =
@@ -59,7 +57,7 @@ type alias SignInResponse =
     }
 
 
-type alias AuthenticationRequest =
+type alias SignInRequest =
     { email : String
     , password : String
     }
@@ -67,7 +65,17 @@ type alias AuthenticationRequest =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { email = Nothing, password = Nothing, authenticationState = Anonymous, authMethod = SignIn }, Cmd.none )
+    ( { formState = FillingSignInForm newSignInRequest, authenticationState = Unknown }, Cmd.none )
+
+
+newSignInRequest : SignInRequest
+newSignInRequest =
+    { email = "", password = "" }
+
+
+newRegistrationRequest : RegistrationRequest
+newRegistrationRequest =
+    { email = "", password = "" }
 
 
 
@@ -77,58 +85,68 @@ init =
 type Msg
     = SetEmail String
     | SetPassword String
-    | RunSignIn
-    | RunRegister
+    | RunSignIn SignInRequest
+    | RunRegister RegistrationRequest
     | SignInResult (Result Http.Error SignInResponse)
     | RegisterResult (Result Http.Error RegistrationResponse)
-    | ChangeAuthMethod AuthMethod
+    | ChangeFormState FormState
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         SetPassword str ->
-            ( { model | password = Just str }, Cmd.none )
+            case model.formState of
+                FillingSignInForm req ->
+                    let
+                        newReq =
+                            { req | password = str }
+                    in
+                    ( { model | formState = FillingSignInForm newReq }, Cmd.none )
+
+                FillingRegistrationForm req ->
+                    let
+                        newReq =
+                            { req | password = str }
+                    in
+                    ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
 
         SetEmail str ->
-            ( { model | email = Just str }, Cmd.none )
+            case model.formState of
+                FillingSignInForm req ->
+                    let
+                        newReq =
+                            { req | email = str }
+                    in
+                    ( { model | formState = FillingSignInForm newReq }, Cmd.none )
 
-        RunSignIn ->
-            case ( model.email, model.password ) of
-                ( Just email, Just pass ) ->
-                    ( { model | authenticationState = Authenticating }
-                    , sign_in (AuthenticationRequest email pass)
-                    )
+                FillingRegistrationForm req ->
+                    let
+                        newReq =
+                            { req | email = str }
+                    in
+                    ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
 
-                otherwise ->
-                    ( model, Cmd.none )
+        RunSignIn req ->
+            ( { model | authenticationState = InProgress }, sign_in req )
 
-        RunRegister ->
-            case ( model.email, model.password ) of
-                ( Just email, Just pass ) ->
-                    ( { model | authenticationState = Authenticating }
-                    , register (RegistrationRequest email pass)
-                    )
-
-                otherwise ->
-                    ( model, Cmd.none )
+        RunRegister req ->
+            ( { model | authenticationState = InProgress }, register req )
 
         SignInResult (Ok resp) ->
             ( { model | authenticationState = Authenticated resp.token }, Cmd.none )
 
         SignInResult (Err resp) ->
-            ( { model | authenticationState = AuthenticationFailure }, Cmd.none )
+            ( { model | authenticationState = Failed }, Cmd.none )
 
         RegisterResult (Ok resp) ->
-            Debug.log "register ok"
-                ( { model | authenticationState = Authenticated resp.token }, Cmd.none )
+            ( { model | authenticationState = Authenticated resp.token }, Cmd.none )
 
         RegisterResult (Err resp) ->
-            Debug.log "register err"
-                ( { model | authenticationState = AuthenticationFailure }, Cmd.none )
+            ( { model | authenticationState = Failed }, Cmd.none )
 
-        ChangeAuthMethod authMethod ->
-            ( { model | authMethod = authMethod }, Cmd.none )
+        ChangeFormState newState ->
+            ( { model | formState = newState }, Cmd.none )
 
 
 
@@ -138,65 +156,64 @@ update msg model =
 view : Model -> Html.Html Msg
 view model =
     let
+        failed =
+            case model.authenticationState of
+                Failed ->
+                    True
+
+                otherwise ->
+                    False
+
         body =
             case model.authenticationState of
-                Anonymous ->
-                    registerOrSignInFormView
+                InProgress ->
+                    column [ centerY, centerX, Background.color gray7, height (fill |> Element.minimum 352 |> Element.maximum 352) ]
+                        [ signInOrAuthenticateTabView model
+                        , el [ height fill, width (fill |> Element.minimum 400 |> Element.maximum 480) ] spinner
+                        ]
 
                 Authenticated _ ->
-                    authenticatedView
+                    el [ centerY, centerX ] (text "Authenticated!")
 
-                Authenticating ->
-                    authenticatingView
+                otherwise ->
+                    let
+                        form =
+                            case model.formState of
+                                FillingRegistrationForm req ->
+                                    registerFormView req failed
 
-                AuthenticationFailure ->
-                    registerOrSignInFormView
+                                FillingSignInForm req ->
+                                    signInFormView req failed
+                    in
+                    column [ spacing 16, centerY, centerX, Background.color gray7, height (fill |> Element.minimum 352 |> Element.maximum 352) ]
+                        [ signInOrAuthenticateTabView model
+                        , el [ width (fill |> Element.minimum 400 |> Element.maximum 480) ] form
+                        ]
     in
-    Element.layout [ Font.color gray1, Background.color white, centerX ] (body model)
-
-
-authenticatedView : Model -> Element Msg
-authenticatedView model =
-    el [ centerY, centerX ] (text "Authenticated!")
-
-
-registerOrSignInFormView : Model -> Element Msg
-registerOrSignInFormView model =
-    column [ spacing 16, centerY, centerX, Background.color gray7, height (fill |> Element.minimum 352 |> Element.maximum 352) ]
-        [ signInOrAuthenticateTabView model
-        , el [ width (fill |> Element.minimum 400 |> Element.maximum 480) ] (emailPasswordFormView model)
-        ]
-
-
-authenticatingView : Model -> Element Msg
-authenticatingView model =
-    column [ centerY, centerX, Background.color gray7, height (fill |> Element.minimum 352 |> Element.maximum 352) ]
-        [ signInOrAuthenticateTabView model
-        , el [ height fill, width (fill |> Element.minimum 400 |> Element.maximum 480) ] spinner
-        ]
+    Element.layout [ Font.color gray1, Background.color white, centerX ] body
 
 
 signInOrAuthenticateTabView : Model -> Element Msg
 signInOrAuthenticateTabView model =
     let
         ( bgCol1, bgCol2 ) =
-            case model.authMethod of
-                Register ->
+            case model.formState of
+                FillingRegistrationForm _ ->
                     ( gray6, gray7 )
 
-                SignIn ->
+                FillingSignInForm _ ->
                     ( gray7, gray6 )
     in
     row [ width fill, Region.heading 1, Font.size 32, Background.color gray6 ]
         [ el [ padding 8, width (Element.fillPortion 1), Background.color bgCol1 ]
             (Input.button [ centerX, width fill, height fill ]
-                { onPress = Just (ChangeAuthMethod SignIn)
+                { onPress = Just (ChangeFormState (FillingSignInForm newSignInRequest))
                 , label = text "Sign In"
                 }
             )
         , el [ padding 8, width (Element.fillPortion 1), Background.color bgCol2 ]
             (Input.button [ centerX, width fill, height fill ]
-                { onPress = Just (ChangeAuthMethod Register)
+                { onPress = Just (ChangeFormState (FillingRegistrationForm newRegistrationRequest))
                 , label = text "Register"
                 }
             )
@@ -211,52 +228,27 @@ spinner =
         }
 
 
-emailPasswordFormView : Model -> Element Msg
-emailPasswordFormView model =
-    let
-        authenticationMessage =
-            case model.authenticationState of
-                AuthenticationFailure ->
-                    el [ centerX, Font.color (rgb255 255 0 0) ] (text "Invalid username or password")
-
-                otherwise ->
-                    el [] (text "")
-
-        ( buttonLabel, msg ) =
-            case model.authMethod of
-                Register ->
-                    ( "Register", RunRegister )
-
-                SignIn ->
-                    ( "Sign In", RunSignIn )
-    in
+registerFormView : RegistrationRequest -> Bool -> Element Msg
+registerFormView req failed =
     column [ padding 8, spacing 8, width fill ]
-        [ Input.email [ onEnter msg ]
+        [ Input.email [ onEnter (RunRegister req) ]
             { onChange = SetEmail
-            , text =
-                case model.email of
-                    Just str ->
-                        str
-
-                    Nothing ->
-                        ""
+            , text = req.email
             , placeholder = Nothing
             , label = Input.labelAbove [ alignLeft, Element.pointer ] (text "Email")
             }
-        , Input.currentPassword [ onEnter msg ]
+        , Input.currentPassword [ onEnter (RunRegister req) ]
             { onChange = SetPassword
             , show = False
-            , text =
-                case model.password of
-                    Just str ->
-                        str
-
-                    Nothing ->
-                        ""
+            , text = req.password
             , placeholder = Nothing
             , label = Input.labelAbove [ alignLeft, Element.pointer ] (text "Password")
             }
-        , authenticationMessage
+        , if failed then
+            el [ centerX, Font.color (rgb255 255 0 0) ] (text "Invalid username or password")
+
+          else
+            el [] (text "")
         , el [ Element.paddingXY 0 16, width fill ]
             (Input.button [ centerX ]
                 { label =
@@ -266,8 +258,45 @@ emailPasswordFormView model =
                         , padding 16
                         , width (fill |> Element.minimum 240 |> Element.maximum 240)
                         ]
-                        (text buttonLabel)
-                , onPress = Just msg
+                        (text "Register")
+                , onPress = Just (RunRegister req)
+                }
+            )
+        ]
+
+
+signInFormView : SignInRequest -> Bool -> Element Msg
+signInFormView req failed =
+    column [ padding 8, spacing 8, width fill ]
+        [ Input.email [ onEnter (RunSignIn req) ]
+            { onChange = SetEmail
+            , text = req.email
+            , placeholder = Nothing
+            , label = Input.labelAbove [ alignLeft, Element.pointer ] (text "Email")
+            }
+        , Input.currentPassword [ onEnter (RunSignIn req) ]
+            { onChange = SetPassword
+            , show = False
+            , text = req.password
+            , placeholder = Nothing
+            , label = Input.labelAbove [ alignLeft, Element.pointer ] (text "Password")
+            }
+        , if failed then
+            el [ centerX, Font.color (rgb255 255 0 0) ] (text "Invalid username or password")
+
+          else
+            el [] (text "")
+        , el [ Element.paddingXY 0 16, width fill ]
+            (Input.button [ centerX ]
+                { label =
+                    el
+                        [ Background.color callToActionBackgroundColor
+                        , Font.color callToActionTextColor
+                        , padding 16
+                        , width (fill |> Element.minimum 240 |> Element.maximum 240)
+                        ]
+                        (text "Sign In")
+                , onPress = Just (RunSignIn req)
                 }
             )
         ]
@@ -346,7 +375,7 @@ onEnter msg =
 ---- JSON Encoders & Decoders ----
 
 
-authenticationRequestEncoder : AuthenticationRequest -> Encode.Value
+authenticationRequestEncoder : SignInRequest -> Encode.Value
 authenticationRequestEncoder req =
     Encode.object
         [ ( "email", Encode.string req.email )
@@ -385,7 +414,7 @@ register req =
         }
 
 
-sign_in : AuthenticationRequest -> Cmd Msg
+sign_in : SignInRequest -> Cmd Msg
 sign_in req =
     Http.post
         { url = "/api/rpc/sign_in"
