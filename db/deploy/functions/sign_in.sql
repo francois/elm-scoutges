@@ -21,7 +21,7 @@ BEGIN;
       -- unsuccessful attempt at checking a password. This will take approximately the
       -- same amount of time as the crypt(text, text) call below, thus preventing timing
       -- attacks against this function.
-      PERFORM crypt('boubou', '$2a$15$bwIigAojw.5eIR/ZFZmhEOo.f670p1GnksfxFXx79GL.76u8tKKy2');
+      PERFORM crypt('boubou', gen_salt('bf', coalesce(current_setting('security.bf_strength', true), '15')::integer));
       RAISE invalid_password USING message = 'Invalid email or password';
     END IF;
 

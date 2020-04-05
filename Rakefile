@@ -35,3 +35,21 @@ namespace :db do
     # jwt:secret:rotate will restart postgrest, no need to do it ourselves
   end
 end
+
+namespace :spec do
+  desc "Runs the PostgreSQL tests"
+  task :db do
+    # sh "dropdb scoutges_test || exit 0"
+    # sh "createdb scoutges_test"
+    sh "sqitch deploy --quiet --target test"
+
+    sh ["psql", "--no-psqlrc", "--quiet", "--dbname", "postgresql://localhost/scoutges_test", "--file", "spec/db/_setup.sql"].shelljoin
+
+    Dir["spec/db/**/*_spec.sql"].each do |filename|
+      sh ["psql", "--no-psqlrc", "--quiet", "--dbname", "postgresql://localhost/scoutges_test", "--file", filename].shelljoin
+    end
+  end
+end
+
+task :spec => "spec:db"
+task :default => "spec"

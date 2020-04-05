@@ -19,6 +19,7 @@ GEM
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.9.0)
     rspec-support (3.9.2)
+    rspec_tap (0.1.0)
     sequel (5.31.0)
     sequel_pg (1.12.5)
       pg (>= 0.18.0, != 1.2.0)
@@ -33,6 +34,7 @@ DEPENDENCIES
   que
   rake
   rspec
+  rspec_tap
   sequel
   sequel_pg
 
