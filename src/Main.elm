@@ -2,7 +2,7 @@ module Main exposing (..)
 
 import Browser
 import Debug
-import Element exposing (Element, alignLeft, alignRight, centerX, centerY, column, el, fill, height, padding, px, rgb255, row, spacing, text, width)
+import Element exposing (Element, centerX, centerY, column, el, height, padding, px, rgb255, row, spacing, text, width)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
@@ -167,9 +167,9 @@ view model =
         body =
             case model.authenticationState of
                 InProgress ->
-                    column [ centerY, centerX, Background.color gray7, height (fill |> Element.minimum 352 |> Element.maximum 352) ]
+                    column [ centerY, centerX, Background.color gray7, height (Element.fill |> Element.minimum 352 |> Element.maximum 352) ]
                         [ signInOrAuthenticateTabView model
-                        , el [ height fill, width (fill |> Element.minimum 400 |> Element.maximum 480) ] spinner
+                        , el [ height Element.fill, width (Element.fill |> Element.minimum 400 |> Element.maximum 480) ] spinner
                         ]
 
                 Authenticated _ ->
@@ -185,9 +185,9 @@ view model =
                                 FillingSignInForm req ->
                                     signInFormView req failed
                     in
-                    column [ spacing 16, centerY, centerX, Background.color gray7, height (fill |> Element.minimum 352 |> Element.maximum 352) ]
+                    column [ spacing 16, centerY, centerX, Background.color gray7, height (Element.fill |> Element.minimum 352 |> Element.maximum 352) ]
                         [ signInOrAuthenticateTabView model
-                        , el [ width (fill |> Element.minimum 400 |> Element.maximum 480) ] form
+                        , el [ width (Element.fill |> Element.minimum 400 |> Element.maximum 480) ] form
                         ]
     in
     Element.layout [ Font.color gray1, Background.color white, centerX ] body
@@ -204,15 +204,15 @@ signInOrAuthenticateTabView model =
                 FillingSignInForm _ ->
                     ( gray7, gray6 )
     in
-    row [ width fill, Region.heading 1, Font.size 32, Background.color gray6 ]
+    row [ width Element.fill, Region.heading 1, Font.size 32, Background.color gray6 ]
         [ el [ padding 8, width (Element.fillPortion 1), Background.color bgCol1 ]
-            (Input.button [ centerX, width fill, height fill ]
+            (Input.button [ centerX, width Element.fill, height Element.fill ]
                 { onPress = Just (ChangeFormState (FillingSignInForm newSignInRequest))
                 , label = text "Sign In"
                 }
             )
         , el [ padding 8, width (Element.fillPortion 1), Background.color bgCol2 ]
-            (Input.button [ centerX, width fill, height fill ]
+            (Input.button [ centerX, width Element.fill, height Element.fill ]
                 { onPress = Just (ChangeFormState (FillingRegistrationForm newRegistrationRequest))
                 , label = text "Register"
                 }
@@ -230,33 +230,33 @@ spinner =
 
 registerFormView : RegistrationRequest -> Bool -> Element Msg
 registerFormView req failed =
-    column [ padding 8, spacing 8, width fill ]
+    column [ padding 8, spacing 8, width Element.fill ]
         [ Input.email [ onEnter (RunRegister req) ]
             { onChange = SetEmail
             , text = req.email
             , placeholder = Nothing
-            , label = Input.labelAbove [ alignLeft, Element.pointer ] (text "Email")
+            , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Email")
             }
         , Input.currentPassword [ onEnter (RunRegister req) ]
             { onChange = SetPassword
             , show = False
             , text = req.password
             , placeholder = Nothing
-            , label = Input.labelAbove [ alignLeft, Element.pointer ] (text "Password")
+            , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Password")
             }
         , if failed then
             el [ centerX, Font.color (rgb255 255 0 0) ] (text "Invalid username or password")
 
           else
             el [] (text "")
-        , el [ Element.paddingXY 0 16, width fill ]
+        , el [ Element.paddingXY 0 16, width Element.fill ]
             (Input.button [ centerX ]
                 { label =
                     el
                         [ Background.color callToActionBackgroundColor
                         , Font.color callToActionTextColor
                         , padding 16
-                        , width (fill |> Element.minimum 240 |> Element.maximum 240)
+                        , width (Element.fill |> Element.minimum 240 |> Element.maximum 240)
                         ]
                         (text "Register")
                 , onPress = Just (RunRegister req)
@@ -267,33 +267,33 @@ registerFormView req failed =
 
 signInFormView : SignInRequest -> Bool -> Element Msg
 signInFormView req failed =
-    column [ padding 8, spacing 8, width fill ]
+    column [ padding 8, spacing 8, width Element.fill ]
         [ Input.email [ onEnter (RunSignIn req) ]
             { onChange = SetEmail
             , text = req.email
             , placeholder = Nothing
-            , label = Input.labelAbove [ alignLeft, Element.pointer ] (text "Email")
+            , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Email")
             }
         , Input.currentPassword [ onEnter (RunSignIn req) ]
             { onChange = SetPassword
             , show = False
             , text = req.password
             , placeholder = Nothing
-            , label = Input.labelAbove [ alignLeft, Element.pointer ] (text "Password")
+            , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Password")
             }
         , if failed then
             el [ centerX, Font.color (rgb255 255 0 0) ] (text "Invalid username or password")
 
           else
             el [] (text "")
-        , el [ Element.paddingXY 0 16, width fill ]
+        , el [ Element.paddingXY 0 16, width Element.fill ]
             (Input.button [ centerX ]
                 { label =
                     el
                         [ Background.color callToActionBackgroundColor
                         , Font.color callToActionTextColor
                         , padding 16
-                        , width (fill |> Element.minimum 240 |> Element.maximum 240)
+                        , width (Element.fill |> Element.minimum 240 |> Element.maximum 240)
                         ]
                         (text "Sign In")
                 , onPress = Just (RunSignIn req)
