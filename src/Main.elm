@@ -22,12 +22,12 @@ import Json.Encode as Encode
 type alias Model =
     { email : Maybe String
     , password : Maybe String
-    , authenticationUiState : AuthenticationUIState
+    , authenticationState : AuthenticationState
     , authMethod : AuthMethod
     }
 
 
-type AuthenticationUIState
+type AuthenticationState
     = Authenticated String
     | Anonymous
     | Authenticating
@@ -63,7 +63,7 @@ type alias AuthenticationRequest =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { email = Nothing, password = Nothing, authenticationUiState = Anonymous, authMethod = SignIn }, Cmd.none )
+    ( { email = Nothing, password = Nothing, authenticationState = Anonymous, authMethod = SignIn }, Cmd.none )
 
 
 
@@ -92,7 +92,7 @@ update msg model =
         TryAuthenticate ->
             case ( model.email, model.password ) of
                 ( Just email, Just pass ) ->
-                    ( { model | authenticationUiState = Authenticating }
+                    ( { model | authenticationState = Authenticating }
                     , authenticate (AuthenticationRequest email pass)
                     )
 
@@ -102,7 +102,7 @@ update msg model =
         TryRegister ->
             case ( model.email, model.password ) of
                 ( Just email, Just pass ) ->
-                    ( { model | authenticationUiState = Authenticating }
+                    ( { model | authenticationState = Authenticating }
                     , register (RegistrationRequest email pass)
                     )
 
@@ -110,18 +110,18 @@ update msg model =
                     ( model, Cmd.none )
 
         SignInResult (Ok resp) ->
-            ( { model | authenticationUiState = Authenticated resp.token }, Cmd.none )
+            ( { model | authenticationState = Authenticated resp.token }, Cmd.none )
 
         SignInResult (Err resp) ->
-            ( { model | authenticationUiState = AuthenticationFailure }, Cmd.none )
+            ( { model | authenticationState = AuthenticationFailure }, Cmd.none )
 
         RegisterResult (Ok resp) ->
             Debug.log "register ok"
-                ( { model | authenticationUiState = Authenticated resp.token }, Cmd.none )
+                ( { model | authenticationState = Authenticated resp.token }, Cmd.none )
 
         RegisterResult (Err resp) ->
             Debug.log "register err"
-                ( { model | authenticationUiState = AuthenticationFailure }, Cmd.none )
+                ( { model | authenticationState = AuthenticationFailure }, Cmd.none )
 
         ChangeAuthMethod authMethod ->
             ( { model | authMethod = authMethod }, Cmd.none )
@@ -135,7 +135,7 @@ view : Model -> Html.Html Msg
 view model =
     let
         body =
-            case model.authenticationUiState of
+            case model.authenticationState of
                 Anonymous ->
                     registerOrSignInFormView
 
@@ -211,7 +211,7 @@ emailPasswordFormView : Model -> Element Msg
 emailPasswordFormView model =
     let
         authenticationMessage =
-            case model.authenticationUiState of
+            case model.authenticationState of
                 AuthenticationFailure ->
                     el [ centerX, Font.color (rgb255 255 0 0) ] (text "Invalid username or password")
 
