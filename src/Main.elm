@@ -227,7 +227,7 @@ emailPasswordFormView model =
                     ( "Sign In", TryAuthenticate )
     in
     column [ padding 8, spacing 8, width fill ]
-        [ Input.email [ onEnter TryAuthenticate ]
+        [ Input.email [ onEnter msg ]
             { onChange = SetEmail
             , text =
                 case model.email of
@@ -239,7 +239,7 @@ emailPasswordFormView model =
             , placeholder = Nothing
             , label = Input.labelAbove [ alignLeft, Element.pointer ] (text "Email")
             }
-        , Input.currentPassword [ onEnter TryAuthenticate ]
+        , Input.currentPassword [ onEnter msg ]
             { onChange = SetPassword
             , show = False
             , text =
