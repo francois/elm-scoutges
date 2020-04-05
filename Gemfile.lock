@@ -1,10 +1,16 @@
+GIT
+  remote: https://github.com/que-rb/que
+  revision: 065981f26c555ac682fa9944823324f6613e060a
+  branch: master
+  specs:
+    que (1.0.0.beta4)
+
 GEM
   remote: https://rubygems.org/
   specs:
     database_cleaner (1.8.4)
     diff-lcs (1.3)
     pg (1.2.3)
-    que (0.14.3)
     rake (13.0.1)
     rspec (3.9.0)
       rspec-core (~> 3.9.0)
@@ -31,7 +37,7 @@ PLATFORMS
 DEPENDENCIES
   database_cleaner
   pg
-  que
+  que!
   rake
   rspec
   rspec_tap

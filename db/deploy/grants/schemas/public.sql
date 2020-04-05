@@ -6,7 +6,7 @@ BEGIN;
 
   REVOKE ALL PRIVILEGES ON SCHEMA public FROM PUBLIC;
   GRANT ALL PRIVILEGES ON SCHEMA public TO current_user;
-  GRANT USAGE ON SCHEMA public TO anonymous, authenticated;
+  GRANT USAGE ON SCHEMA public TO anonymous, authenticated, postgrest;
 
 COMMIT;
 
