@@ -18,3 +18,4 @@ casts/jwt_token_to_json [extensions/pgjwt] 2020-04-04T21:57:45Z François Beauso
 functions/sign_in [tables/active_jwt_tokens casts/jwt_token_to_json] 2020-04-03T23:45:30Z François Beausoleil <francois@teksol.info> # Offer a wqy for anonymous users to authenticate with the system
 functions/register [tables/users tables/active_jwt_tokens functions/generate_jwt_token casts/jwt_token_to_json] 2020-04-04T19:33:24Z François Beausoleil <francois@teksol.info> # Enable registration from the frontend
 functions/pre_request_authenticator [tables/active_jwt_tokens] 2020-04-04T16:40:55Z François Beausoleil <francois@teksol.info> # A function that will run before every PostgREST request and authenticate the incoming JWT
+extensions/que 2020-04-05T01:28:19Z François Beausoleil <francois@teksol.info> # Prepare to add delayed jobs
