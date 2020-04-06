@@ -6,6 +6,7 @@ SET client_min_messages TO 'warning';
 BEGIN;
 
   REVOKE ALL PRIVILEGES ON TABLE que_jobs, que_values FROM PUBLIC;
+
   GRANT INSERT ON TABLE que_jobs, que_values TO anonymous, authenticated, postgrest;
   GRANT INSERT ON TABLE que_lockers TO postgrest;
   GRANT SELECT, DELETE ON TABLE que_jobs, que_lockers TO postgrest;

@@ -11,17 +11,19 @@ BEGIN;
     user_pass text;
     result public.jwt_token;
   BEGIN
-    SELECT groups.pgrole, users.password, users.email
-    INTO user_role, user_pass, user_email
+    SELECT groups.pgrole, users.email, users.password
+    INTO user_role, user_email, user_pass
     FROM users
     JOIN groups ON groups.name = users.group_name
     WHERE users.email = sign_in.email;
 
+    -- IF not_found THEN ... END IF
+
     IF user_role IS NULL THEN
-      -- To prevent attackers guessing if the email exists or not, we make a for sure
-      -- unsuccessful attempt at checking a password. This will take approximately the
-      -- same amount of time as the crypt(text, text) call below, thus preventing timing
-      -- attacks against this function.
+      -- To prevent attackers guessing if the email exists or not, we throttle them
+      -- by making an unsuccessful attempt at checking a password. This takes approximately the
+      -- same amount of time as a successful check, hence this introduces friction for attackers
+      -- and may help us against script-kiddy attacks.
       PERFORM crypt('boubou', gen_salt('bf', coalesce(current_setting('security.bf_strength', true), '15')::integer));
       RAISE invalid_password USING message = 'Invalid email or password';
     END IF;

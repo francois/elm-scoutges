@@ -10,11 +10,13 @@ BEGIN;
   CREATE OR REPLACE FUNCTION api.register(email text, password text, group_name text, name text, phone text) RETURNS json AS $$
   DECLARE
     result public.jwt_token;
+    pgrole text;
   BEGIN
-    INSERT INTO public.groups(name, pgrole) VALUES (group_name, 'authenticated');
+    SELECT public.create_group_role(group_name) INTO pgrole;
+    INSERT INTO public.groups(name, slug, pgrole) VALUES (group_name, public.slugify(group_name), pgrole);
 
-    INSERT INTO public.users(email, password, name, phone, group_name)
-    VALUES(register.email, register.password, register.name, register.phone, register.group_name);
+    INSERT INTO public.users(email, password, name, phone, group_name, pgrole)
+    VALUES(register.email, register.password, register.name, register.phone, register.group_name, pgrole);
 
     INSERT INTO public.que_jobs(job_class, args)
     VALUES('Scoutges::Jobs::SendWelcomeEmail', jsonb_build_array(register.email));
