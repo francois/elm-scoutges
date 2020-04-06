@@ -43,7 +43,7 @@ namespace :db do
     sh "dropdb scoutges_development || exit 0"
     sh "createdb scoutges_development"
     sh "sqitch deploy"
-    sh [ "bin/dbconsole", "--command", "INSERT INTO users(email, password, pguser) VALUES ('francois@teksol.info', 'monkeymonkey', 'authenticated')" ].shelljoin
+    sh [ "bin/dbconsole", "--command", "INSERT INTO groups(name, pgrole) VALUES ('10eme', 'authenticated'); INSERT INTO users(email, password, name, phone, group_name) VALUES ('francois@teksol.info', 'monkeymonkey', 'Francois', '888-555-1212', '10eme')" ].shelljoin
     Rake::Task["jwt:secret:rotate"].invoke
 
     # jwt:secret:rotate will restart postgrest, no need to do it ourselves

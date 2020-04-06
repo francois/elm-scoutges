@@ -4,7 +4,7 @@ SET client_min_messages TO 'warning';
 
 BEGIN;
 
-  DROP FUNCTION api.register(text, text);
+  DROP FUNCTION api.register(text, text, text, text, text);
 
 COMMIT;
 

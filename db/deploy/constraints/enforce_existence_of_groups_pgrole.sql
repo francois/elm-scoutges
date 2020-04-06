@@ -6,8 +6,8 @@ BEGIN;
 
   CREATE OR REPLACE FUNCTION public.check_role_exists() RETURNS trigger AS $$
   BEGIN
-    IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE pg_roles.rolname = NEW.pguser) THEN
-      RAISE foreign_key_violation USING message = 'Unknown database role: ' || NEW.pguser;
+    IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE pg_roles.rolname = NEW.pgrole) THEN
+      RAISE foreign_key_violation USING message = 'Unknown database role: ' || NEW.pgrole;
       RETURN NULL;
     END IF;
 
@@ -15,10 +15,10 @@ BEGIN;
   END
   $$ LANGUAGE plpgsql;
 
-  DROP TRIGGER IF EXISTS check_role_exists ON public.users;
+  DROP TRIGGER IF EXISTS check_role_exists ON public.groups;
   CREATE CONSTRAINT TRIGGER check_role_exists
-  AFTER INSERT OR UPDATE OF pguser
-  ON public.users
+  AFTER INSERT OR UPDATE OF pgrole
+  ON public.groups
   FOR EACH ROW
   EXECUTE FUNCTION public.check_role_exists();
 

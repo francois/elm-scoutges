@@ -7,12 +7,14 @@ SET client_min_messages TO 'warning';
 
 BEGIN;
 
-  CREATE OR REPLACE FUNCTION api.register(email text, password text) RETURNS json AS $$
+  CREATE OR REPLACE FUNCTION api.register(email text, password text, group_name text, name text, phone text) RETURNS json AS $$
   DECLARE
     result public.jwt_token;
   BEGIN
-    INSERT INTO public.users(email, password, pguser)
-    VALUES(register.email, register.password, 'authenticated');
+    INSERT INTO public.groups(name, pgrole) VALUES (group_name, 'authenticated');
+
+    INSERT INTO public.users(email, password, name, phone, group_name)
+    VALUES(register.email, register.password, register.name, register.phone, register.group_name);
 
     INSERT INTO public.que_jobs(job_class, args)
     VALUES('Scoutges::Jobs::SendWelcomeEmail', jsonb_build_array(register.email));

@@ -49,6 +49,9 @@ type alias RegistrationResponse =
 type alias RegistrationRequest =
     { email : String
     , password : String
+    , name : String
+    , groupName : String
+    , phone : String
     }
 
 
@@ -75,7 +78,7 @@ newSignInRequest =
 
 newRegistrationRequest : RegistrationRequest
 newRegistrationRequest =
-    { email = "", password = "" }
+    { email = "", password = "", groupName = "", name = "", phone = "" }
 
 
 
@@ -85,6 +88,9 @@ newRegistrationRequest =
 type Msg
     = SetEmail String
     | SetPassword String
+    | SetName String
+    | SetGroupName String
+    | SetPhone String
     | RunSignIn SignInRequest
     | RunRegister RegistrationRequest
     | SignInResult (Result Http.Error SignInResponse)
@@ -127,8 +133,44 @@ update msg model =
                     in
                     ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
 
+        SetName str ->
+            case model.formState of
+                FillingRegistrationForm req ->
+                    let
+                        newReq =
+                            { req | name = str }
+                    in
+                    ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
+
+                otherwise ->
+                    ( model, Cmd.none )
+
+        SetPhone str ->
+            case model.formState of
+                FillingRegistrationForm req ->
+                    let
+                        newReq =
+                            { req | phone = str }
+                    in
+                    ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
+
+                otherwise ->
+                    ( model, Cmd.none )
+
+        SetGroupName str ->
+            case model.formState of
+                FillingRegistrationForm req ->
+                    let
+                        newReq =
+                            { req | groupName = str }
+                    in
+                    ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
+
+                otherwise ->
+                    ( model, Cmd.none )
+
         RunSignIn req ->
-            ( { model | authenticationState = InProgress }, sign_in req )
+            ( { model | authenticationState = InProgress }, signIn req )
 
         RunRegister req ->
             ( { model | authenticationState = InProgress }, register req )
@@ -164,6 +206,14 @@ view model =
                 otherwise ->
                     False
 
+        heightPx =
+            case model.formState of
+                FillingRegistrationForm _ ->
+                    576
+
+                FillingSignInForm _ ->
+                    352
+
         body =
             case model.authenticationState of
                 InProgress ->
@@ -185,7 +235,7 @@ view model =
                                 FillingSignInForm req ->
                                     signInFormView req failed
                     in
-                    column [ spacing 16, centerY, centerX, Background.color gray7, height (Element.fill |> Element.minimum 352 |> Element.maximum 352) ]
+                    column [ spacing 16, centerY, centerX, Background.color gray7, height (Element.px heightPx) ]
                         [ signInOrAuthenticateTabView model
                         , el [ width (Element.fill |> Element.minimum 400 |> Element.maximum 480) ] form
                         ]
@@ -231,13 +281,31 @@ spinner =
 registerFormView : RegistrationRequest -> Bool -> Element Msg
 registerFormView req failed =
     column [ padding 8, spacing 8, width Element.fill ]
-        [ Input.email [ onEnter (RunRegister req) ]
+        [ Input.text [ onEnter (RunRegister req) ]
+            { onChange = SetGroupName
+            , text = req.groupName
+            , placeholder = Nothing
+            , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Group Name")
+            }
+        , Input.text [ onEnter (RunRegister req) ]
+            { onChange = SetName
+            , text = req.name
+            , placeholder = Nothing
+            , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Name")
+            }
+        , Input.text [ onEnter (RunRegister req) ]
+            { onChange = SetPhone
+            , text = req.phone
+            , placeholder = Nothing
+            , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Phone")
+            }
+        , Input.email [ onEnter (RunRegister req) ]
             { onChange = SetEmail
             , text = req.email
             , placeholder = Nothing
             , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Email")
             }
-        , Input.currentPassword [ onEnter (RunRegister req) ]
+        , Input.newPassword [ onEnter (RunRegister req) ]
             { onChange = SetPassword
             , show = False
             , text = req.password
@@ -393,6 +461,9 @@ registrationRequestEncoder req =
     Encode.object
         [ ( "email", Encode.string req.email )
         , ( "password", Encode.string req.password )
+        , ( "name", Encode.string req.name )
+        , ( "group_name", Encode.string req.groupName )
+        , ( "phone", Encode.string req.phone )
         ]
 
 
@@ -414,8 +485,8 @@ register req =
         }
 
 
-sign_in : SignInRequest -> Cmd Msg
-sign_in req =
+signIn : SignInRequest -> Cmd Msg
+signIn req =
     Http.post
         { url = "/api/rpc/sign_in"
         , body = Http.jsonBody (authenticationRequestEncoder req)

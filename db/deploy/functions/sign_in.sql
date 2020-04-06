@@ -11,9 +11,10 @@ BEGIN;
     user_pass text;
     result public.jwt_token;
   BEGIN
-    SELECT users.pguser, users.password, users.email
+    SELECT groups.pgrole, users.password, users.email
     INTO user_role, user_pass, user_email
     FROM users
+    JOIN groups ON groups.name = users.group_name
     WHERE users.email = sign_in.email;
 
     IF user_role IS NULL THEN
