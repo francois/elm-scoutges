@@ -23,6 +23,20 @@ namespace :jwt do
 end
 
 namespace :db do
+  desc "Deploys the latest changes to the development database"
+  task :deploy do
+    sh "overmind stop postgrest worker"
+    sh "sqitch deploy"
+    sh "overmind restart postgrest"
+  end
+
+  desc "Reverts and reapplies the most recent change to the development database"
+  task :rebase do
+    sh "overmind stop postgrest worker"
+    sh ["sqitch", "rebase", "HEAD^"].shelljoin
+    sh "overmind restart postgrest"
+  end
+
   desc "Destroys the local database and creates a new one"
   task :reset do
     sh "overmind stop postgrest worker"
