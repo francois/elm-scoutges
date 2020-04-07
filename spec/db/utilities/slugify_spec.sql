@@ -3,7 +3,7 @@
 BEGIN;
   SELECT plan(11);
 
-  SELECT is(slugify(str), want)
+  SELECT is(slugify(have), want, quote_ident(have))
   FROM (VALUES
       ('10th', '10th')
     , ('10 eme', '10-eme')
@@ -16,7 +16,7 @@ BEGIN;
     , (' ', '')
     , ('AbCd', 'abcd')
     , ('10ème Groupe Scout Est-Calade (Fleurimont)', '10eme-groupe-scout-est-calade-fleurimont')
-  ) t0(str, want);
+  ) t0(have, want);
 
   SELECT finish();
 ROLLBACK;
