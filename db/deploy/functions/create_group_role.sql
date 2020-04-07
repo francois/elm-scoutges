@@ -14,11 +14,15 @@ BEGIN;
       RAISE EXCEPTION USING errcode = 'check_violation', hint = 'Identifier too long, keep it below 64 characters';
     END IF;
 
-    IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE pg_roles.rolname = group_name) THEN
-      EXECUTE 'CREATE ROLE ' || quote_ident(group_name) || ' NOSUPERUSER NOCREATEDB NOCREATEROLE ' ||
-                'INHERIT NOLOGIN NOREPLICATION NOBYPASSRLS ' ||
-                'IN ROLE authenticated';
-    END IF;
+    -- Deliberately always create a role, even if that would create an error
+    -- This function is a single step within the registration process. If new
+    -- people could create their own user within the same group, this could
+    -- become a security issue. Instead, the first person to sign up will
+    -- have to invite all other people. In this way, new users will become
+    -- part of the group fo the person who invited them.
+    EXECUTE 'CREATE ROLE ' || quote_ident(group_name) || ' NOSUPERUSER NOCREATEDB NOCREATEROLE ' ||
+              'INHERIT NOLOGIN NOREPLICATION NOBYPASSRLS ' ||
+              'IN ROLE authenticated';
 
     RETURN group_name;
   END

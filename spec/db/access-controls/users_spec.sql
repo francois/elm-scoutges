@@ -6,7 +6,7 @@ BEGIN;
   SET LOCAL ROLE TO anonymous;
     PREPARE p1 AS SELECT api.register($1, 'monkeymonkey', $2, 'Bob ' || random(), '');
     SELECT lives_ok('EXECUTE p1(''bob@teksol.info'', ''1er Drummondville'')', 'anonymous can register');
-    SELECT lives_ok('EXECUTE p1(''john@teksol.info'', ''1er Drummondville'')');
+    SELECT lives_ok('INSERT INTO public.users(email, password, group_name, pgrole, name, phone) VALUES (''john@teksol.info'', ''monkey'', ''1er Drummondville'', ''1er Drummondville'', ''John'', '''')');
     SELECT lives_ok('EXECUTE p1(''peter@teksol.info'', ''4ème St-Hubert'')');
   RESET ROLE;
 
