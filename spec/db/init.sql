@@ -1,4 +1,4 @@
-\i spec/db/_helper.sql
+\i spec/db/setup.sql
 \set on_error_stop on
 
 BEGIN;

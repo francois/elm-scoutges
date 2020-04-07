@@ -59,7 +59,7 @@ namespace :spec do
     sh "createdb scoutges_test"
     sh "sqitch deploy --quiet --target test"
 
-    sh ["psql", "--no-psqlrc", "--quiet", "--dbname", "postgresql://localhost/scoutges_test", "--file", "spec/db/_setup.sql"].shelljoin
+    sh ["psql", "--no-psqlrc", "--quiet", "--dbname", "postgresql://localhost/scoutges_test", "--file", "spec/db/init.sql"].shelljoin
 
     Dir["spec/db/**/*_spec.sql"].each do |filename|
       sh ["psql", "--no-psqlrc", "--quiet", "--dbname", "postgresql://localhost/scoutges_test", "--file", filename].shelljoin

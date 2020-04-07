@@ -1,4 +1,4 @@
-\i spec/db/_helper.sql
+\i spec/db/setup.sql
 
 BEGIN;
   SELECT plan(2);
