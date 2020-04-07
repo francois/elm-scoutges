@@ -13,7 +13,9 @@ BEGIN;
     pgrole text;
   BEGIN
     SELECT public.create_group_role(group_name) INTO pgrole;
-    INSERT INTO public.groups(name, slug, pgrole) VALUES (group_name, public.slugify(group_name), pgrole);
+    INSERT INTO public.groups(name, slug, pgrole)
+    VALUES (group_name, public.slugify(group_name), pgrole)
+    ON CONFLICT DO NOTHING;
 
     INSERT INTO public.users(email, password, name, phone, group_name, pgrole)
     VALUES(register.email, register.password, register.name, register.phone, register.group_name, pgrole);

@@ -18,6 +18,7 @@ policies/tables/groups [tables/groups grants/tables/groups] 2020-04-06T12:21:10Z
 constraints/enforce_existence_of_groups_pgrole [tables/groups] 2020-04-04T15:08:52Z François Beausoleil <francois@teksol.info> # PG does not allow a foreign key reference to pg_roles, so we fake a constraint violation using a constraint trigger
 tables/users 2020-04-03T21:43:22Z François Beausoleil <francois@teksol.info> # Record users and their DB role
 grants/tables/users [tables/users] 2020-04-04T15:54:34Z François Beausoleil <francois@teksol.info> # The list of grants on the users table
+policies/users [tables/users] 2020-04-07T03:12:06Z François Beausoleil <francois@teksol.info> # Add row-level security policies to users
 triggers/encrypt_users_password [tables/users] 2020-04-04T14:56:09Z François Beausoleil <francois@teksol.info> # Automatically encrypt user passwords on write to the users table
 triggers/canonicalize_user_email [tables/users] 2020-04-04T16:03:45Z François Beausoleil <francois@teksol.info> # Force all emails to canonicalize to the same lower-case version, so that we don't need to worry about that in the authentication flow
 tables/active_jwt_tokens [tables/users extensions/pgcrypto] 2020-04-04T15:41:44Z François Beausoleil <francois@teksol.info> # Record active tokens, in order to allow tokens to be invalidated

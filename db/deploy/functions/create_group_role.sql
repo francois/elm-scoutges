@@ -14,9 +14,12 @@ BEGIN;
       RAISE EXCEPTION USING errcode = 'check_violation', hint = 'Identifier too long, keep it below 64 characters';
     END IF;
 
-    EXECUTE 'CREATE ROLE ' || quote_ident(group_name) || ' NOSUPERUSER NOCREATEDB NOCREATEROLE ' ||
-              'INHERIT NOLOGIN NOREPLICATION NOBYPASSRLS ' ||
-              'IN ROLE authenticated';
+    IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE pg_roles.rolname = group_name) THEN
+      EXECUTE 'CREATE ROLE ' || quote_ident(group_name) || ' NOSUPERUSER NOCREATEDB NOCREATEROLE ' ||
+                'INHERIT NOLOGIN NOREPLICATION NOBYPASSRLS ' ||
+                'IN ROLE authenticated';
+    END IF;
+
     RETURN group_name;
   END
   $$ LANGUAGE plpgsql VOLATILE SECURITY DEFINER;

@@ -13,8 +13,10 @@ BEGIN;
   FOR ALL
   TO anonymous
   USING(
-    current_setting('request.jwt.claim.role', true) = 'anonymous'
+    current_user = 'anonymous'
   );
+
+  COMMENT ON POLICY anonymous_select ON public.groups IS 'Used while signing in, when the request is still unauthenticated';
 
   CREATE POLICY self_select
   ON public.groups
@@ -25,6 +27,8 @@ BEGIN;
     current_user = groups.pgrole
   );
 
+  COMMENT ON POLICY self_select ON public.groups IS 'Every member of a group can read their own information';
+
   CREATE POLICY self_edit
   ON public.groups
   AS PERMISSIVE
@@ -34,7 +38,7 @@ BEGIN;
     current_user = groups.pgrole
   );
 
-   COMMENT ON POLICY self_edit ON public.groups IS 'Only allow editing the row that matches "us", the currently logged in user';
+  COMMENT ON POLICY self_edit ON public.groups IS 'There is a high degree of trust within scouting groups, and as such, we authorize any members of a group to edit the group''s details';
 
 COMMIT;
 
