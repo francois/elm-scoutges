@@ -39,6 +39,17 @@ BEGIN;
 
   COMMENT ON POLICY self_edit ON public.users IS 'Every user can edit their own details';
 
+  CREATE POLICY self_invite
+  ON public.users
+  AS PERMISSIVE
+  FOR INSERT
+  TO authenticated
+  WITH CHECK(
+    users.pgrole = current_user
+  );
+
+  COMMENT ON POLICY self_invite ON public.users IS 'Users can invite new people in their group';
+
 COMMIT;
 
 -- vim: expandtab shiftwidth=2

@@ -17,8 +17,8 @@ BEGIN;
   GRANT
       SELECT(email, password, name, phone, group_name, pgrole)
     , UPDATE(email, password, name, phone)
+    , INSERT(email, password, name, phone, group_name)
   ON public.users TO authenticated;
-
 
   GRANT USAGE ON SEQUENCE users_id_seq TO anonymous, authenticated;
 
