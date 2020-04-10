@@ -1,5 +1,6 @@
 elm: elm-app start --no-browser
 nginx: nginx -c "${PWD}/nginx.conf"
-postgresql: postmaster -D db/cluster
+pgdev: postgres -D db/cluster-dev -p 5432
+pgtest: postgres -D db/cluster-test -p 5433
 postgrest: sleep 2 && postgrest postgrest.conf
 worker: sleep 2 && bundle exec que ./config/app

@@ -1,5 +1,6 @@
 require "securerandom"
 require "shellwords"
+require "uri"
 
 namespace :jwt do
   namespace :secret do
@@ -41,31 +42,66 @@ namespace :db do
   desc "Destroys the local database and creates a new one"
   task :reset do
     sh "overmind stop postgrest worker"
-    sh "dropdb scoutges_development || exit 0"
-    sh "createdb scoutges_development"
-    sh "sqitch deploy"
-    Rake::Task["jwt:secret:rotate"].invoke
-    sh [ "dropuser", "--if-exists", "10ème Est-Calade"].shelljoin
-    sh [ "bin/dbconsole", "--command", "SELECT api.register('francois@teksol.info', 'monkeymonkey', '10ème Est-Calade', 'Francois', '888-555-1212')" ].shelljoin
+    reset_env(:development)
 
+    sh "sqitch deploy --target development"
+    Rake::Task["jwt:secret:rotate"].invoke
     # jwt:secret:rotate will restart postgrest, no need to do it ourselves
+    sh [ "bin/dbconsole", "--command", "SELECT api.register('francois@teksol.info', 'monkeymonkey', '10ème Est-Calade', 'Francois', '888-555-1212')" ].shelljoin
   end
 end
 
 namespace :spec do
   desc "Runs the PostgreSQL tests"
   task :db do
-    sh "dropdb scoutges_test || exit 0"
-    sh "createdb scoutges_test"
-    sh "sqitch deploy --quiet --target test"
+    reset_env(:test)
 
-    sh ["psql", "--no-psqlrc", "--quiet", "--dbname", "postgresql://localhost/scoutges_test", "--file", "spec/db/init.sql"].shelljoin
+    sh [ "sqitch", "deploy", "--target", "test" ].shelljoin
+    sh [ "psql", "--no-psqlrc", "--quiet", "--dbname", dburi(:test), "--file", "spec/db/init.sql" ].shelljoin
 
     Dir["spec/db/**/*_spec.sql"].each do |filename|
-      sh ["psql", "--no-psqlrc", "--quiet", "--dbname", "postgresql://localhost/scoutges_test", "--file", filename].shelljoin
+      sh [ "psql", "--no-psqlrc", "--quiet", "--dbname", dburi(:test), "--file", filename ].shelljoin
     end
   end
 end
 
 task :spec => "spec:db"
 task :default => "spec"
+
+def dburl(env)
+  `sqitch target show #{env} | grep URI | cut -d : -f 3-`.strip.sub(/^pg:/, "postgres:")
+end
+
+def dburi(env)
+  URI.parse(dburl(env))
+end
+
+ENVS_TO_SHORT = {
+  "development" => :dev,
+  :development  => :dev,
+  "test"        => :test,
+  :test         => :test,
+}.freeze
+
+def reset_env(env)
+  shortenv = ENVS_TO_SHORT.fetch(env)
+
+  devuri = dburi(env)
+  pguri  = devuri.dup
+  pguri.user = ENV.fetch("USER")
+  pguri.path = "/postgres"
+
+  sh "overmind stop pg#{shortenv}"
+  sleep 1
+  rm_rf "db/cluster-#{shortenv}"
+  sleep 1
+  sh "initdb --data-checksums --no-sync --pgdata db/cluster-#{shortenv}"
+  sh "echo \"log_statement = 'all'\" >> db/cluster-#{shortenv}/postgresql.conf"
+  sh "overmind restart pg#{shortenv}"
+  sleep 1
+
+  read      = [ "cat", "db/bootstrap.sql" ].shelljoin
+  transform = [ "sed", "s/ENV/#{env}/g" ].shelljoin
+  apply     = [ "bin/dbconsole", "--dbname", pguri, "--no-psqlrc", "--quiet", "--file", "-" ].shelljoin
+  sh "#{read} | #{transform} | #{apply}"
+end

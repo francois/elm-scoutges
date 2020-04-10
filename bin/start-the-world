@@ -1,2 +1,2 @@
 #!/bin/sh
-OVERMIND_PROCESSES=elm,nginx,postgresql,postgrest exec overmind start -f Procfile.dev
+OVERMIND_PROCESSES=elm,nginx,pgdev,pgtest,postgrest exec overmind start -f Procfile.dev

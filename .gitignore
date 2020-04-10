@@ -14,7 +14,7 @@ node_modules
 .DS_Store
 
 # PostgreSQL database cluster
-db/cluster
+db/cluster*
 
 # Log files
 log
