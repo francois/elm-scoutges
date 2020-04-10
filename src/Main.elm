@@ -1,14 +1,13 @@
-module Main exposing (..)
+module Main exposing (main)
 
 import Browser
 import Debug
-import Element exposing (Element, alignLeft, alignRight, alignTop, centerX, centerY, column, el, fill, height, padding, px, rgb255, row, spacing, text, width)
+import Element exposing (Element, Color, alignLeft, alignRight, alignTop, centerX, centerY, column, el, fill, height, padding, px, rgb255, row, spacing, text, width)
 import Element.Background as Background
-import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
-import Html exposing (Html)
+import Html
 import Html.Events
 import Http
 import Json.Decode as Decode
@@ -153,7 +152,7 @@ update msg model =
                     in
                     ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
 
-                otherwise ->
+                _ ->
                     ( model, Cmd.none )
 
         SetPhone str ->
@@ -165,7 +164,7 @@ update msg model =
                     in
                     ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
 
-                otherwise ->
+                _ ->
                     ( model, Cmd.none )
 
         SetGroupName str ->
@@ -177,7 +176,7 @@ update msg model =
                     in
                     ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
 
-                otherwise ->
+                _ ->
                     ( model, Cmd.none )
 
         RunSignIn req ->
@@ -189,13 +188,13 @@ update msg model =
         SignInResult (Ok resp) ->
             ( { model | authenticationState = Authenticated resp.token }, getAllUsers resp.token )
 
-        SignInResult (Err resp) ->
+        SignInResult (Err _) ->
             ( { model | authenticationState = Failed }, Cmd.none )
 
         RegisterResult (Ok resp) ->
             ( { model | authenticationState = Authenticated resp.token }, getAllUsers resp.token )
 
-        RegisterResult (Err resp) ->
+        RegisterResult (Err _) ->
             ( { model | authenticationState = Failed }, Cmd.none )
 
         ChangeFormState newState ->
@@ -204,7 +203,7 @@ update msg model =
         UsersLoaded (Ok users) ->
             ( { model | users = Just users }, Cmd.none )
 
-        UsersLoaded (Err resp) ->
+        UsersLoaded (Err _) ->
             ( model, Cmd.none )
 
 
@@ -220,7 +219,7 @@ view model =
                 Failed ->
                     True
 
-                otherwise ->
+                _ ->
                     False
 
         heightPx =
@@ -242,7 +241,7 @@ view model =
                 Authenticated _ ->
                     authenticatedView model
 
-                otherwise ->
+                _ ->
                     let
                         form =
                             case model.formState of
@@ -272,7 +271,7 @@ authenticatedView model =
 
 
 navbarView : Model -> Element Msg
-navbarView model =
+navbarView _ =
     row [ Element.alignTop, width fill, Region.navigation ]
         [ row [ width fill, spacing 8 ]
             [ el [ padding 8, Element.alignLeft ] (text "Scoutges")
@@ -443,54 +442,57 @@ signInFormView req failed =
         ]
 
 
+callToActionTextColor :   Color
 callToActionTextColor =
     white
 
 
+callToActionBackgroundColor : Color
 callToActionBackgroundColor =
     rgb255 32 32 240
 
 
+black :   Color
 black =
     rgb255 0 0 0
 
-
+gray0 :  Color
 gray0 =
     black
 
-
+gray1:  Color
 gray1 =
     rgb255 32 32 32
 
-
+gray2:Color
 gray2 =
     rgb255 64 64 64
 
-
+gray3:Color
 gray3 =
     rgb255 96 96 96
 
-
+gray4:Color
 gray4 =
     rgb255 128 128 128
 
-
+gray5:Color
 gray5 =
     rgb255 160 160 160
 
-
+gray6:Color
 gray6 =
     rgb255 192 192 192
 
-
+gray7:Color
 gray7 =
     rgb255 224 224 224
 
-
+gray8:Color
 gray8 =
     white
 
-
+white:Color
 white =
     rgb255 255 255 255
 
