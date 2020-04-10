@@ -13,8 +13,8 @@ BEGIN;
   BEGIN
     SELECT groups.pgrole, users.email, users.password
     INTO user_role, user_email, user_pass
-    FROM users
-    JOIN groups ON groups.name = users.group_name
+    FROM public.users
+    JOIN public.groups ON groups.name = users.group_name
     WHERE users.email = sign_in.email;
 
     -- IF not_found THEN ... END IF

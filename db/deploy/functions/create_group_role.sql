@@ -23,6 +23,7 @@ BEGIN;
     EXECUTE 'CREATE ROLE ' || quote_ident(group_name) || ' NOSUPERUSER NOCREATEDB NOCREATEROLE ' ||
               'INHERIT NOLOGIN NOREPLICATION NOBYPASSRLS ' ||
               'IN ROLE authenticated';
+    EXECUTE 'GRANT ' || quote_ident(group_name) || ' TO postgrest';
 
     RETURN group_name;
   END

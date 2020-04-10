@@ -22,6 +22,16 @@ import Json.Encode as Encode
 type alias Model =
     { formState : FormState
     , authenticationState : AuthenticationState
+    , users : Maybe (List User)
+    }
+
+
+type alias User =
+    { name : String
+    , email : String
+    , groupName : String
+    , phone : String
+    , registeredAt : String
     }
 
 
@@ -68,7 +78,7 @@ type alias SignInRequest =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { formState = FillingSignInForm newSignInRequest, authenticationState = Unknown }, Cmd.none )
+    ( { formState = FillingSignInForm newSignInRequest, authenticationState = Unknown, users = Nothing }, Cmd.none )
 
 
 newSignInRequest : SignInRequest
@@ -96,6 +106,7 @@ type Msg
     | SignInResult (Result Http.Error SignInResponse)
     | RegisterResult (Result Http.Error RegistrationResponse)
     | ChangeFormState FormState
+    | UsersLoaded (Result Http.Error (List User))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -176,19 +187,25 @@ update msg model =
             ( { model | authenticationState = InProgress }, register req )
 
         SignInResult (Ok resp) ->
-            ( { model | authenticationState = Authenticated resp.token }, Cmd.none )
+            ( { model | authenticationState = Authenticated resp.token }, getAllUsers resp.token )
 
         SignInResult (Err resp) ->
             ( { model | authenticationState = Failed }, Cmd.none )
 
         RegisterResult (Ok resp) ->
-            ( { model | authenticationState = Authenticated resp.token }, Cmd.none )
+            ( { model | authenticationState = Authenticated resp.token }, getAllUsers resp.token )
 
         RegisterResult (Err resp) ->
             ( { model | authenticationState = Failed }, Cmd.none )
 
         ChangeFormState newState ->
             ( { model | formState = newState, authenticationState = Unknown }, Cmd.none )
+
+        UsersLoaded (Ok users) ->
+            ( { model | users = Just users }, Cmd.none )
+
+        UsersLoaded (Err resp) ->
+            ( model, Cmd.none )
 
 
 
@@ -268,8 +285,34 @@ navbarView model =
 
 authBody : Model -> Element Msg
 authBody model =
+    let
+        table =
+            case model.users of
+                Nothing ->
+                    Element.none
+
+                Just users ->
+                    Element.table []
+                        { data = users
+                        , columns =
+                            [ { header = el [ Font.bold ] (Element.text "Name")
+                              , width = fill
+                              , view =
+                                    \user ->
+                                        Element.text user.name
+                              }
+                            , { header = el [ Font.bold ] (Element.text "Email")
+                              , width = fill
+                              , view =
+                                    \user ->
+                                        Element.text user.email
+                              }
+                            ]
+                        }
+    in
     column []
         [ Element.paragraph [] [ text "Please take a moment to invite your colleagues to Scoutges:" ]
+        , table
         ]
 
 
@@ -502,6 +545,21 @@ registrationResponseDecoder =
     Decode.map RegistrationResponse (Decode.field "token" Decode.string)
 
 
+userDecoder : Decode.Decoder User
+userDecoder =
+    Decode.map5 User
+        (Decode.field "user_name" Decode.string)
+        (Decode.field "user_email" Decode.string)
+        (Decode.field "group_name" Decode.string)
+        (Decode.field "user_phone" Decode.string)
+        (Decode.field "user_registered_at" Decode.string)
+
+
+userListDecoder : Decode.Decoder (List User)
+userListDecoder =
+    Decode.list userDecoder
+
+
 
 ---- Commands ----
 
@@ -521,6 +579,19 @@ signIn req =
         { url = "/api/rpc/sign_in"
         , body = Http.jsonBody (authenticationRequestEncoder req)
         , expect = Http.expectJson SignInResult authenticationResponseDecoder
+        }
+
+
+getAllUsers : JwtToken -> Cmd Msg
+getAllUsers token =
+    Http.request
+        { method = "GET"
+        , headers = [ Http.header "Authorization" ("Bearer " ++ token), Http.header "Accept" "application/json" ]
+        , url = "/api/users"
+        , body = Http.emptyBody
+        , expect = Http.expectJson UsersLoaded userListDecoder
+        , timeout = Nothing
+        , tracker = Nothing
         }
 
 

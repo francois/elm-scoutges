@@ -28,3 +28,5 @@ functions/pre_request_authenticator [tables/active_jwt_tokens] 2020-04-04T16:40:
 functions/sign_in [tables/active_jwt_tokens casts/jwt_token_to_json tables/groups] 2020-04-03T23:45:30Z François Beausoleil <francois@teksol.info> # Offer a wqy for anonymous users to authenticate with the system
 functions/register [tables/groups tables/users tables/active_jwt_tokens functions/generate_jwt_token casts/jwt_token_to_json functions/create_group_role functions/slugify] 2020-04-04T19:33:24Z François Beausoleil <francois@teksol.info> # Enable registration from the frontend
 functions/invite [tables/users extensions/que] 2020-04-07T12:09:23Z François Beausoleil <francois@teksol.info> # Provide a way for group members to invite other people to the group
+views/users [tables/users schemas/api] 2020-04-10T13:00:22Z François Beausoleil <francois@teksol.info> # Preset a unified view of users to authenticated people
+grants/views/users [views/users] 2020-04-10T13:00:31Z François Beausoleil <francois@teksol.info> # Only authenticated can view users
