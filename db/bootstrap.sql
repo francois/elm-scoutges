@@ -4,5 +4,5 @@ CREATE ROLE authenticated NOLOGIN;
 CREATE ROLE postgrest LOGIN PASSWORD 'supersecretpassword' IN ROLE anonymous, authenticated;
 
 SET ROLE TO migrator;
-  CREATE DATABASE scoutges_ENV;
+  CREATE DATABASE scoutges_%ENV%;
 RESET ROLE;

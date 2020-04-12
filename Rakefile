@@ -103,7 +103,7 @@ def reset_env(env)
   sleep 1
 
   read      = [ "cat", "db/bootstrap.sql" ].shelljoin
-  transform = [ "sed", "s/ENV/#{env}/g" ].shelljoin
+  transform = [ "sed", "s/%ENV%/#{env}/g" ].shelljoin
   apply     = [ "bin/dbconsole", "--dbname", pguri, "--no-psqlrc", "--quiet", "--file", "-" ].shelljoin
   sh "#{read} | #{transform} | #{apply}"
 end
