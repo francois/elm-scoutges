@@ -6,39 +6,26 @@ SET client_min_messages TO 'warning';
 
 BEGIN;
 
-  -- When signing in
-  CREATE POLICY anonymous_select
+  CREATE POLICY self_crud
   ON public.groups
   AS PERMISSIVE
   FOR ALL
-  TO anonymous
-  USING(
-    current_user = 'anonymous'
+  TO authenticated
+  USING (
+    groups.pgrole = current_user
   );
 
-  COMMENT ON POLICY anonymous_select ON public.groups IS 'Used while signing in, when the request is still unauthenticated';
+  COMMENT ON POLICY self_crud ON public.groups IS 'Any member of a group can CRUD all members of the group. This is due to the high degree of trust within scouting groups.';
 
-  CREATE POLICY self_select
+  CREATE POLICY anon_sign_in
   ON public.groups
   AS PERMISSIVE
   FOR SELECT
-  TO authenticated
-  USING (
-    current_user = groups.pgrole
-  );
+  TO anonymous
+  USING (true);
 
-  COMMENT ON POLICY self_select ON public.groups IS 'Every member of a group can read their own information';
+  COMMENT ON POLICY anon_sign_in ON public.groups IS 'Anonymous must be able to find their record in order to sign in';
 
-  CREATE POLICY self_edit
-  ON public.groups
-  AS PERMISSIVE
-  FOR UPDATE
-  TO authenticated
-  USING (
-    current_user = groups.pgrole
-  );
-
-  COMMENT ON POLICY self_edit ON public.groups IS 'There is a high degree of trust within scouting groups, and as such, we authorize any members of a group to edit the group''s details';
 
 COMMIT;
 

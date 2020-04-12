@@ -13,12 +13,15 @@ BEGIN;
     pgrole text;
   BEGIN
     SELECT public.create_group_role(group_name) INTO pgrole;
-    INSERT INTO public.groups(name, slug, pgrole)
-    VALUES (group_name, public.slugify(group_name), pgrole)
-    ON CONFLICT DO NOTHING;
 
-    INSERT INTO public.users(email, password, name, phone, group_name, pgrole)
-    VALUES(register.email, register.password, register.name, register.phone, register.group_name, pgrole);
+    EXECUTE 'SET LOCAL ROLE TO ' || quote_ident(pgrole);
+      INSERT INTO public.groups(name, slug)
+      VALUES (group_name, public.slugify(group_name))
+      ON CONFLICT DO NOTHING;
+
+      INSERT INTO public.users(email, password, name, phone, group_name)
+      VALUES(register.email, register.password, register.name, register.phone, register.group_name);
+    RESET ROLE;
 
     INSERT INTO public.que_jobs(job_class, args)
     VALUES('Scoutges::Jobs::SendWelcomeEmail', jsonb_build_array(register.email));
@@ -41,7 +44,8 @@ BEGIN;
 
   COMMENT ON FUNCTION api.register IS 'The method through which people can register to be users of the app';
 
-  GRANT execute ON FUNCTION api.register TO anonymous;
+  REVOKE ALL PRIVILEGES ON FUNCTION api.register(text, text, text, text, text) FROM PUBLIC;
+  GRANT EXECUTE ON FUNCTION api.register(text, text, text, text, text) TO anonymous;
 
 COMMIT;
 

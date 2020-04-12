@@ -1,4 +1,5 @@
 \i spec/db/setup.sql
+\connect -reuse-previous=on - migrator
 \set on_error_stop on
 
 BEGIN;

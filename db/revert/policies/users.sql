@@ -4,9 +4,8 @@ SET client_min_messages TO 'warning';
 
 BEGIN;
 
-  DROP POLICY anonymous_select ON public.users;
-  DROP POLICY self_select ON public.users;
-  DROP POLICY self_edit ON public.users;
+  DROP POLICY group_crud ON public.users;
+  DROP POLICY anon_sign_in ON public.users;
 
 COMMIT;
 

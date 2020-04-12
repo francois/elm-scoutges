@@ -32,6 +32,9 @@ BEGIN;
   REVOKE ALL PRIVILEGES ON FUNCTION public.create_group_role(text) FROM PUBLIC;
   GRANT EXECUTE ON FUNCTION public.create_group_role(text) TO anonymous;
 
+  -- migrator is a superuser, and can thus create new roles
+  ALTER FUNCTION public.create_group_role(text) OWNER TO migrator;
+
 COMMIT;
 
 -- vim: expandtab shiftwidth=2

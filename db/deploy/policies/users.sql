@@ -5,50 +5,25 @@ SET client_min_messages TO 'warning';
 
 BEGIN;
 
-  CREATE POLICY anonymous_select
+  CREATE POLICY group_crud
   ON public.users
   AS PERMISSIVE
   FOR ALL
-  TO anonymous
-  USING(
-    current_user = 'anonymous'
-  );
-
-  COMMENT ON POLICY anonymous_select ON public.users IS 'Used while signing in, when the request is still unauthenticated';
-
-  CREATE POLICY self_select
-  ON public.users
-  AS PERMISSIVE
-  FOR SELECT
   TO authenticated
   USING (
-    current_user = users.pgrole
-  );
-
-  COMMENT ON POLICY self_select ON public.users IS 'Every user can read all users of their group';
-
-  CREATE POLICY self_edit
-  ON public.users
-  AS PERMISSIVE
-  FOR UPDATE
-  TO authenticated
-  USING (
-        current_user = users.pgrole
-    AND current_setting('request.jwt.claim.email', true) = users.email
-  );
-
-  COMMENT ON POLICY self_edit ON public.users IS 'Every user can edit their own details';
-
-  CREATE POLICY self_invite
-  ON public.users
-  AS PERMISSIVE
-  FOR INSERT
-  TO authenticated
-  WITH CHECK(
     users.pgrole = current_user
   );
 
-  COMMENT ON POLICY self_invite ON public.users IS 'Users can invite new people in their group';
+  COMMENT ON POLICY group_crud ON public.users IS 'Every user can read all users of their group';
+
+  CREATE POLICY anon_sign_in
+  ON public.users
+  AS PERMISSIVE
+  FOR SELECT
+  TO anonymous
+  USING (true);
+
+  COMMENT ON POLICY anon_sign_in ON public.users IS 'Anonymous must be able to find their record in order to sign in.';
 
 COMMIT;
 

@@ -8,7 +8,7 @@ BEGIN;
       id serial not null unique
     , name text not null check(length(name) > 1) primary key
     , slug text not null unique
-    , pgrole text not null unique
+    , pgrole text not null unique default current_user
     , registered_at timestamp with time zone not null default current_timestamp
   );
 

@@ -2,30 +2,29 @@
 
 BEGIN;
 
-  SELECT plan(7);
-
-  CREATE ROLE "101st" WITH NOLOGIN IN ROLE authenticated;
-  INSERT INTO public.groups(name, pgrole, slug) VALUES ('101st', 'authenticated', '101st');
+  SELECT plan(8);
 
   SET LOCAL ROLE TO anonymous;
-    -- Required to mimic what PostgREST does
-    SET LOCAL "request.jwt.claim.role" TO 'anonymous';
+    PREPARE p1 AS SELECT api.register('president@101st.org', 'president', '101st', '', '');
+    SELECT lives_ok('p1');
+  RESET ROLE;
 
-    PREPARE p1 AS
+  SET LOCAL ROLE TO anonymous;
+    PREPARE p2 AS
       SELECT api.register(
           'baden@teksol.info'
         , 'monkeymonkey'
         , '47th'
         , 'Lord Robert Stephenson Smyth Baden Powell of Gilwell'
         , '03928341233');
-    SELECT lives_ok('p1');
+    SELECT lives_ok('p2');
 
-    SELECT lives_ok('SELECT name FROM public.groups', 'anonymous can read groups');
-    SELECT throws_ok('UPDATE public.groups SET name = ''47eme''', '42501', NULL, 'anonymous cannot update group names');
+    SELECT set_eq('SELECT name FROM public.groups', array['47th', '101st'], 'anonymous can read groups');
+    UPDATE public.groups SET name = '47eme';
+    SELECT set_eq('SELECT name FROM public.groups', array['47th', '101st'], 'anonymous was not able to change any group names');
   RESET ROLE;
 
   SET LOCAL ROLE TO "47th";
-    SET LOCAL "request.jwt.claim.role" TO '47th';
     SELECT set_eq('SELECT name FROM public.groups', array['47th'], 'authenticated can only see their own group');
 
     PREPARE p5 AS

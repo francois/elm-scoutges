@@ -10,7 +10,7 @@ BEGIN;
     , password text not null
     , name text not null
     , phone text not null
-    , group_name text not null references public.groups on update cascade on delete cascade
+    , group_name text not null default current_user references public.groups on update cascade on delete cascade
     , pgrole text not null default current_user references public.groups(pgrole) on update cascade on delete cascade
     , registered_at timestamp with time zone not null default current_timestamp
   );
