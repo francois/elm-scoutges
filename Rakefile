@@ -54,9 +54,11 @@ end
 namespace :spec do
   desc "Runs the PostgreSQL tests"
   task :db do
-    reset_env(:test)
+    if ENV.fetch("QUICK", "false") != "true"
+      reset_env(:test)
+      sh [ "sqitch", "deploy", "--target", "test" ].shelljoin
+    end
 
-    sh [ "sqitch", "deploy", "--target", "test" ].shelljoin
     sh [ "psql", "--no-psqlrc", "--quiet", "--dbname", dburi(:test), "--file", "spec/db/init.sql" ].shelljoin
 
     Dir["spec/db/**/*_spec.sql"].each do |filename|
