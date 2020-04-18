@@ -60,10 +60,15 @@ namespace :spec do
     end
 
     sh [ "psql", "--no-psqlrc", "--quiet", "--dbname", dburi(:test), "--file", "spec/db/init.sql" ].shelljoin
-
-    Dir["spec/db/**/*_spec.sql"].each do |filename|
-      sh [ "psql", "--no-psqlrc", "--quiet", "--dbname", dburi(:test), "--file", filename ].shelljoin
-    end
+    sh [ "prove",
+         # "--timer",
+         # "--verbose",
+         "--shuffle",
+         "--ext", "sql",
+         "--jobs", "9",
+         "--exec", "psql --no-psqlrc --quiet --dbname #{dburi(:test)} --file ",
+         Dir["spec/db/**/*_spec.sql"].to_a
+    ].flatten.shelljoin
   end
 end
 
