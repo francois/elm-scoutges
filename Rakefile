@@ -49,16 +49,24 @@ namespace :db do
     # jwt:secret:rotate will restart postgrest, no need to do it ourselves
     sh [ "bin/dbconsole", "--command", "SELECT api.register('francois@teksol.info', 'monkeymonkey', '10ème Est-Calade', 'Francois', '888-555-1212')" ].shelljoin
   end
+
+  namespace :test do
+    desc "Destroys and creates a fresh new version of the test database"
+    task :prepare => "spec/tmp/deploy.txt"
+  end
+end
+
+directory "spec/tmp"
+file "spec/tmp/deploy.txt" => [ "spec/tmp", "db/sqitch.plan", *Dir["db/deploy/**/*.sql"] ] do
+  reset_env(:test)
+  sh [ "sqitch", "deploy", "--target", "test" ].shelljoin
+  rm_f "spec/tmp/deploy.txt"
+  File.write("spec/tmp/deploy.txt", "")
 end
 
 namespace :spec do
   desc "Runs the PostgreSQL tests"
-  task :db do
-    if ENV.fetch("QUICK", "false") != "true"
-      reset_env(:test)
-      sh [ "sqitch", "deploy", "--target", "test" ].shelljoin
-    end
-
+  task :db => "db:test:prepare" do
     sh [ "psql", "--no-psqlrc", "--quiet", "--dbname", dburi(:test), "--file", "spec/db/init.sql" ].shelljoin
     sh [ "prove",
          # "--timer",

@@ -18,3 +18,6 @@ db/cluster*
 
 # Log files
 log
+
+# Temporary files used by the test harness
+spec/tmp
