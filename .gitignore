@@ -21,3 +21,5 @@ log
 
 # Temporary files used by the test harness
 spec/tmp
+
+.byebug_history

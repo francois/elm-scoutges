@@ -8,6 +8,7 @@ gem "sequel"
 gem "sequel_pg", require: false
 
 group :development, :test do
+  gem "byebug"
   gem "database_cleaner"
   gem "rspec"
   gem "rspec_tap"

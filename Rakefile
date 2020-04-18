@@ -2,6 +2,12 @@ require "securerandom"
 require "shellwords"
 require "uri"
 
+begin
+  require "byebug"
+rescue LoadError => _
+  # NOP
+end
+
 namespace :jwt do
   namespace :secret do
     desc "Rotates the jwt.secret, both in the DB and in postgrest.conf"
@@ -64,19 +70,27 @@ file "spec/tmp/deploy.txt" => [ "spec/tmp", "db/sqitch.plan", *Dir["db/deploy/**
   File.write("spec/tmp/deploy.txt", "")
 end
 
+file "spec/tmp/specs-list.txt" => Dir["spec/db/**/*_spec.sql"] do |t|
+  File.open("spec/tmp/specs-list.txt", "w") do |io|
+    io.puts(t.all_prerequisite_tasks.map(&:name))
+  end
+end
+
+
 namespace :spec do
   desc "Runs the PostgreSQL tests"
-  task :db => "db:test:prepare" do
+  task :db => %w( db:test:prepare spec/tmp/specs-list.txt ) do
     sh [ "psql", "--no-psqlrc", "--quiet", "--dbname", dburi(:test), "--file", "spec/db/init.sql" ].shelljoin
-    sh [ "prove",
+    prove = [ "prove",
          # "--timer",
          # "--verbose",
          "--shuffle",
          "--ext", "sql",
          "--jobs", "9",
          "--exec", "psql --no-psqlrc --quiet --dbname #{dburi(:test)} --file ",
-         Dir["spec/db/**/*_spec.sql"].to_a
-    ].flatten.shelljoin
+         "-"
+    ].shelljoin
+    sh "#{prove} < spec/tmp/specs-list.txt"
   end
 end
 
