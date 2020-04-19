@@ -1,8 +1,10 @@
 \i spec/db/setup.sql
 
 BEGIN;
-  SELECT plan(3);
+  SELECT plan(4);
   SELECT lives_ok('SELECT api.purge()', 'purge all');
+
+  SELECT set_eq('SELECT current_setting(''security.bf_strength'', true)::integer', array[4], 'security.bf_strength is low to make specs run rapidly');
 
   SET LOCAL ROLE TO anonymous;
     SELECT ok(p.valid, 'returns valid token from api.register')
