@@ -27,6 +27,7 @@ namespace :db do
     desc "Destroys the development database, if it exists, and creates it from scratch"
     task :development do
       boostrap_env(:development)
+      Rake::Task["jwt:secret:rotate"].invoke
     end
   end
 
