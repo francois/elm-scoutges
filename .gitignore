@@ -33,3 +33,6 @@ node_modules/
 
 # Generated files
 spec/**/*.t
+
+# Prove work files
+.prove

@@ -1,7 +1,7 @@
 --failures
---jobs 1
+--jobs=9
+--state=slow,save
 --recurse
---rules 'seq=spec/db/revert_deploy_spec.t'
---rules 'seq=spec/integration/**/*.t'
---rules 'par=spec/db/**/*.t'
---shuffle
+--rules='seq=spec/db/revert_deploy_spec.t'
+--rules='seq=spec/integration/**/*.t'
+--rules='par=**'
