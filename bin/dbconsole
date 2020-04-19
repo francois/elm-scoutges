@@ -1,2 +1,12 @@
-#!/bin/sh
-exec psql --dbname postgres://localhost/scoutges_development "${@}"
+#!/usr/bin/env ruby
+require "shellwords"
+
+env =
+  case ARGV.first
+  when nil, /^-/ ; "development"
+  when "development", "test" ; ARGV.shift
+  else raise "BOGUS: ARGV.first wasn't nil, but we fellthrough to else... ARGV: #{ARGV.inspect}"
+  end
+
+url =`sqitch target show #{env} | grep URI | cut -d : -f 2- | sed -e 's/db://; s/pg:/postgresql:/; s/migrator@//' | tr -d ' '`.chomp
+exec ["psql", "--dbname", url, *ARGV].shelljoin

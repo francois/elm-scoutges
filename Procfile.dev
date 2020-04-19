@@ -1,10 +1,10 @@
 nginx: nginx -c "${PWD}/nginx.conf"
 
-elm: elm-app start --no-browser
-pg: postgres -D db/cluster-dev -p 5432
-postgrest: sleep 2 && postgrest postgrest.conf
-worker: sleep 2 && bundle exec que ./config/app
+elm: PORT=3001 elm-app start --no-browser
+pgdev: postgres -D db/cluster-dev -p 3002
+postgrestdev: sleep 2 && postgrest postgrest.conf
+workerdev: sleep 2 && bundle exec que ./config/app
 
-elmtest: PORT=5001 elm-app start --no-browser
-pgtest: postgres -D db/cluster-test -p 5433
+elmtest: PORT=4001 elm-app start --no-browser
+pgtest: postgres -D db/cluster-test -p 4002
 postgresttest: sleep 2 && postgrest spec/postgrest.conf
