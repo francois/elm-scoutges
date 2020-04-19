@@ -20,6 +20,7 @@ db/cluster*
 log
 
 # Temporary files used by the test harness
+spec/postgrest.conf
 spec/tmp
 spec/screenshots
 spec/videos

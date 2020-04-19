@@ -47,7 +47,7 @@ namespace :db do
 
   desc "Destroys the local database and creates a new one"
   task :reset do
-    sh "overmind stop postgrest worker"
+    sh "overmind stop postgrestdev worker"
     reset_env(:development)
 
     sh "sqitch deploy --target development"
@@ -64,10 +64,11 @@ end
 
 directory "spec/tmp"
 file "spec/tmp/deploy.txt" => [ "Rakefile", "db/sqitch.plan", *Dir["db/deploy/**/*.sql"], "spec/tmp", "spec/bootstrap.sql", "spec/db/init.sql" ] do
+  sh "overmind stop postgresttest"
   reset_env(:test)
   sh [ "sqitch", "--quiet", "deploy", "--target", "test" ].shelljoin
-  rm_f "spec/tmp/deploy.txt"
-  File.write("spec/tmp/deploy.txt", "")
+  sh "touch spec/tmp/deploy.txt"
+  sh "overmind restart postgresttest"
 end
 
 file "spec/tmp/integration-specs-list.txt" => [ "Rakefile", "spec/tmp", *Dir["spec/integration/**/*_spec.js"] ] do |t|
@@ -82,9 +83,16 @@ file "spec/tmp/db-specs-list.txt" => [ "Rakefile", "spec/tmp", *Dir["spec/db/**/
   end
 end
 
+file "spec/postgrest.conf" => %w( Rakefile postgrest.conf ) do
+  sh "overmind stop postgresttest"
+  sh "sed 's!/scoutges_development!:5433/scoutges_test! ; s/3001/5002/' < postgrest.conf > spec/postgrest.conf"
+  sleep 1
+  sh "overmind restart postgresttest"
+end
+
 namespace :spec do
   desc "Runs the PostgreSQL tests"
-  task :db => %w( db:test:prepare spec/tmp/db-specs-list.txt ) do
+  task :db => %w( Rakefile db:test:prepare spec/tmp/db-specs-list.txt ) do
     sh [ "psql", "--no-psqlrc", "--quiet", "--dbname", dburi(:test), "--file", "spec/db/init.sql" ].shelljoin
     prove = [
       "prove",
@@ -100,7 +108,7 @@ namespace :spec do
   end
 
   desc "Runs the integration test suite"
-  task :integration => %w( db:test:prepare spec/tmp/integration-specs-list.txt ) do
+  task :integration => %w( Rakefile db:test:prepare spec/postgrest.conf spec/tmp/integration-specs-list.txt ) do
     prove = [
       "prove",
       # "--timer",
