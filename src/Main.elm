@@ -398,7 +398,7 @@ registerFormView req failed =
                         , padding 16
                         , width (fill |> Element.minimum 240 |> Element.maximum 240)
                         ]
-                        (text "Register")
+                        (text "Register Now")
                 , onPress = Just (RunRegister req)
                 }
             )
@@ -435,7 +435,7 @@ signInFormView req failed =
                         , padding 16
                         , width (fill |> Element.minimum 240 |> Element.maximum 240)
                         ]
-                        (text "Sign In")
+                        (text "Sign In Now")
                 , onPress = Just (RunSignIn req)
                 }
             )

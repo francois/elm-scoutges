@@ -1,0 +1,6 @@
+{
+  "devDependencies": {
+    "cypress": "^4.4.0",
+    "mocha-tap-reporter": "^0.1.3"
+  }
+}

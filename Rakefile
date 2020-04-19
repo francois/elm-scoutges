@@ -70,16 +70,21 @@ file "spec/tmp/deploy.txt" => [ "spec/tmp", "db/sqitch.plan", *Dir["db/deploy/**
   File.write("spec/tmp/deploy.txt", "")
 end
 
-file "spec/tmp/specs-list.txt" => Dir["spec/db/**/*_spec.sql"] do |t|
-  File.open("spec/tmp/specs-list.txt", "w") do |io|
+file "spec/tmp/integration-specs-list.txt" => Dir["cypress/integration/**/*_spec.js"] do |t|
+  File.open("spec/tmp/integration-specs-list.txt", "w") do |io|
     io.puts(t.all_prerequisite_tasks.map(&:name))
   end
 end
 
+file "spec/tmp/db-specs-list.txt" => Dir["spec/db/**/*_spec.sql"] do |t|
+  File.open("spec/tmp/db-specs-list.txt", "w") do |io|
+    io.puts(t.all_prerequisite_tasks.map(&:name))
+  end
+end
 
 namespace :spec do
   desc "Runs the PostgreSQL tests"
-  task :db => %w( db:test:prepare spec/tmp/specs-list.txt ) do
+  task :db => %w( db:test:prepare spec/tmp/db-specs-list.txt ) do
     sh [ "psql", "--no-psqlrc", "--quiet", "--dbname", dburi(:test), "--file", "spec/db/init.sql" ].shelljoin
     prove = [ "prove",
          # "--timer",
@@ -91,6 +96,20 @@ namespace :spec do
          "-"
     ].shelljoin
     sh "#{prove} < spec/tmp/specs-list.txt"
+  end
+
+  desc "Runs the integration test suite"
+  task :integration => %w( db:test:prepare spec/tmp/integration-specs-list.txt ) do
+    prove = [ "prove",
+         "--timer",
+         # "--verbose",
+         "--shuffle",
+         "--ext", "sql",
+         "--jobs", "1",
+         "--exec", "yarn run cypress run --reporter mocha-tap-reporter --spec ",
+         "-"
+    ].shelljoin
+    sh "#{prove} < spec/tmp/integration-specs-list.txt"
   end
 end
 

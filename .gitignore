@@ -23,3 +23,5 @@ log
 spec/tmp
 
 .byebug_history
+
+node_modules/
