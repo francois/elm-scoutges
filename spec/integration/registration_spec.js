@@ -1,4 +1,8 @@
 describe("Registration", () => {
+  before(() => {
+    cy.request("POST", "/api/rpc/purge");
+  })
+
   it("registers with valid credentials", () => {
     cy.visit("/");
     cy.contains("Register").click()

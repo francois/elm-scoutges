@@ -3,3 +3,5 @@
 
 extensions/pgtap 2020-04-19T15:34:39Z François Beausoleil <francois@teksol.info> # Install the pgTAP extension
 config/jwt 2020-04-19T15:36:19Z François Beausoleil <francois@teksol.info> # Update DB config for faster testing
+functions/purge [scoutges:tables/groups] 2020-04-19T16:09:44Z François Beausoleil <francois@teksol.info> # A function used at the beginning of integration tests to purge all records from the database
+functions/seed_user [scoutges:tables/groups scoutges:tables/users] 2020-04-19T16:32:30Z François Beausoleil <francois@teksol.info> # A function to seed users and groups to the DB
