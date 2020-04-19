@@ -96,7 +96,7 @@ namespace :spec do
   end
 
   desc "Runs the integration test suite"
-  task :integration => %w( Rakefile db:test:prepare spec/postgrest.conf spec/tmp/integration-specs-list.txt ) do
+  task :integration => %w( Rakefile db:test:prepare spec/postgrest.conf spec/tmp/integration-specs-list.txt deps:js ) do
     prove = [
       "prove",
       # "--timer",
@@ -113,6 +113,13 @@ namespace :spec do
   desc "Runs the deploy / revert / deploy test"
   task :revert => %w( Rakefile db:test:prepare bin/revert-test ) do
     sh [ "prove", "--shuffle", "--jobs", "1", "--exec", "bin/revert-test", "bin/revert-test" ].shelljoin
+  end
+end
+
+namespace :deps do
+  desc "Installs any missing dependencies"
+  task :js => %w( package.json yarn.lock ) do
+    sh "yarn install"
   end
 end
 
