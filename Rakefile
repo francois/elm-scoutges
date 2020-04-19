@@ -111,9 +111,8 @@ namespace :spec do
   end
 
   desc "Runs the deploy / revert / deploy test"
-  task :revert => %w( Rakefile db:test:prepare ) do
-    # TODO: extract to own script that outputs TAP, so that prove can run it
-    sh [ "sqitch", "--quiet", "rebase", "--verify", "--target", "test" ].shelljoin
+  task :revert => %w( Rakefile db:test:prepare bin/revert-test ) do
+    sh [ "prove", "--shuffle", "--jobs", "1", "--exec", "bin/revert-test", "bin/revert-test" ].shelljoin
   end
 end
 

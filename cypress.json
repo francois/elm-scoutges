@@ -3,6 +3,7 @@
   "fixturesFolder": "spec/fixtures",
   "integrationFolder": "spec/integration",
   "screenshotsFolder": "spec/screenshots",
-  "videosFolder": false,
+  "videosFolder": "spec/videos",
+  "supportFile": false,
   "pluginsFile": false
 }

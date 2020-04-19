@@ -1,0 +1,6 @@
+#/bin/bash
+set -eu
+echo "1..1"
+sqitch --quiet rebase --verify --target test
+echo "ok 1 Revert to root and deploy everything"
+exit 0
