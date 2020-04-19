@@ -6,6 +6,8 @@ SET client_min_messages TO 'warning';
 
 BEGIN;
 
+  ALTER TABLE public.groups ENABLE ROW LEVEL SECURITY;
+
   CREATE POLICY self_crud
   ON public.groups
   AS PERMISSIVE

@@ -12,8 +12,6 @@ BEGIN;
     , registered_at timestamp with time zone not null default current_timestamp
   );
 
-  ALTER TABLE public.groups ENABLE ROW LEVEL SECURITY;
-
   COMMENT ON TABLE public.groups IS 'Records the list of scout groups that have registered on scoutges';
 
 COMMIT;
