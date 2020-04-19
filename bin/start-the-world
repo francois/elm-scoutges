@@ -1,2 +1,3 @@
 #!/bin/sh
+rake spec/postgrest.conf --quiet
 OVERMIND_PROCESSES=nginx,elm,pgdev,postgrestdev,elmtest,pgtest,postgresttest exec overmind start -f Procfile.dev
