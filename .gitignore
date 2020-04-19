@@ -19,12 +19,18 @@ db/cluster*
 # Log files
 log
 
+# Temporary files
+.byebug_history
+
 # Temporary files used by the test harness
 spec/postgrest.conf
 spec/tmp
 spec/screenshots
 spec/videos
 
-.byebug_history
-
+# Vendored dependencies
 node_modules/
+
+# Generated files
+spec/**/*.t
+.proverc

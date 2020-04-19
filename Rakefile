@@ -59,18 +59,6 @@ file "spec/tmp/deploy.txt" => [ "Rakefile", "db/sqitch.plan", *Dir["db/deploy/**
   sh "overmind restart postgresttest"
 end
 
-file "spec/tmp/integration-specs-list.txt" => [ "Rakefile", "spec/tmp", *Dir["spec/integration/**/*_spec.js"] ] do |t|
-  File.open("spec/tmp/integration-specs-list.txt", "w") do |io|
-    io.puts(t.all_prerequisite_tasks.map(&:name).grep(/_spec[.]js/))
-  end
-end
-
-file "spec/tmp/db-specs-list.txt" => [ "Rakefile", "spec/tmp", *Dir["spec/db/**/*_spec.sql"] ] do |t|
-  File.open("spec/tmp/db-specs-list.txt", "w") do |io|
-    io.puts(t.all_prerequisite_tasks.map(&:name).grep(/_spec[.]sql/))
-  end
-end
-
 file "spec/postgrest.conf" => %w( Rakefile postgrest.conf ) do
   sh "overmind stop postgresttest" rescue nil
   sh "sed 's!:3002/scoutges_development!:4002/scoutges_test! ; s/3003/4003/' < postgrest.conf > spec/postgrest.conf"
@@ -79,40 +67,82 @@ file "spec/postgrest.conf" => %w( Rakefile postgrest.conf ) do
 end
 
 namespace :spec do
-  desc "Runs the PostgreSQL tests"
-  task :db => %w( Rakefile db:test:prepare spec/tmp/db-specs-list.txt ) do
-    sh [ "psql", "--no-psqlrc", "--quiet", "--dbname", dburi(:test), "--file", "spec/db/init.sql" ].shelljoin
-    prove = [
-      "prove",
-      # "--timer",
-      # "--verbose",
-      "--shuffle",
-      "--ext", "sql",
-      "--jobs", "9",
-      "--exec", "psql --no-psqlrc --quiet --dbname #{dburi(:test)} --file ",
-      "-"
-    ].shelljoin
-    sh "#{prove} < spec/tmp/db-specs-list.txt"
+  desc "Removes all generated *.t files"
+  task :clean do
+    rm_f FileList["spec/revert_deploy_spec.t"] + FileList["spec/**/*_spec.js"].ext("t") + FileList["spec/**/*_spec.sql"].ext("t")
+    rm_rf %w(spec/screenshots spec/videos)
   end
 
-  desc "Runs the integration test suite"
-  task :integration => %w( Rakefile db:test:prepare spec/postgrest.conf spec/tmp/integration-specs-list.txt deps:js ) do
-    prove = [
-      "prove",
-      # "--timer",
-      "--verbose",
-      "--shuffle",
-      "--ext", "sql",
-      "--jobs", "1",
-      "--exec", "yarn run cypress run --reporter mocha-tap-reporter --spec ",
-      "-"
-    ].shelljoin
-    sh "#{prove} < spec/tmp/integration-specs-list.txt"
+  desc "Generates *.t to enable prove to run over them"
+  task :prepare => %w( spec:clean spec/revert_deploy_spec.t ) + FileList["spec/**/*_spec.js"].ext(".t") + FileList["spec/**/*_spec.sql"].ext(".t")
+
+  base_spec_deps = %w(
+    Rakefile
+    spec/postgrest.conf
+    db:test:prepare
+    deps:js
+    spec:prepare
+    .proverc
+  )
+  integration_spec_deps = FileList["spec/**/*_spec.js"].ext(".t") + %w(spec/screenshots spec/videos)
+  db_spec_deps          = FileList["spec/**/*_spec.sql"].ext(".t")
+  ruby_spec_deps        = FileList["spec/**/*_spec.rb"].ext(".t")
+
+  desc "Runs all spec suites"
+  task :all => base_spec_deps + integration_spec_deps + db_spec_deps + ["spec/revert_deploy_spec.t"] + ruby_spec_deps do
+    sh "prove --recurse --shuffle --jobs 9 --failures spec"
   end
 
-  desc "Runs the deploy / revert / deploy test"
-  task :revert => %w( Rakefile db:test:prepare bin/revert-test ) do
-    sh [ "prove", "--shuffle", "--jobs", "1", "--exec", "bin/revert-test", "bin/revert-test" ].shelljoin
+  desc "Runs the database specs"
+  task :db => base_spec_deps + db_spec_deps + ["spec/revert_deploy_spec.t"] do |t|
+    sh [ "prove", "--shuffle", "--jobs", "9", "--failures", *t.prerequisite_tasks.map(&:name).grep(/[.]t$/) ].shelljoin
+  end
+
+  desc "Runs the integration specs"
+  task :integration => base_spec_deps + integration_spec_deps do |t|
+    sh [ "prove", "--shuffle", "--jobs", "1", "--failures", *t.prerequisite_tasks.map(&:name).grep(/[.]t$/) ].shelljoin
+  end
+
+  desc "Runs the Ruby specs"
+  task :ruby => base_spec_deps + ruby_spec_deps do |t|
+    sh [ "prove", "--shuffle", "--jobs", "9", "--failures", *t.prerequisite_tasks.map(&:name).grep(/[.]t$/) ].shelljoin
+  end
+end
+
+directory "spec/screenshots"
+directory "spec/videos"
+
+file "spec/revert_deploy_spec.t" do |t|
+  File.write(t.name, "w") do |io|
+    io.puts "#/bin/bash"
+    io.puts "set -eu"
+    io.puts "echo '1..1'"
+    io.puts "sqitch --quiet rebase --verify --target test"
+    io.puts "echo 'ok 1 Revert to root and deploy everything'"
+    io.puts "exit 0"
+  end
+end
+
+file ".proverc" => "Rakefile" do |t|
+  File.open(t.name, "w") do |io|
+    io.puts "--rules 'seq=spec/integration/**/*.t'"
+    io.puts "--rules 'par=**'"
+  end
+end
+
+rule ".t" => ".js" do |t|
+  File.open(t.name, "w") do |io|
+    io.puts "#!/bin/sh"
+    io.puts "set -eu"
+    io.puts "exec yarn run cypress run --reporter mocha-tap-reporter --spec #{t.source}"
+  end
+end
+
+rule ".t" => ".sql" do |t|
+  File.open(t.name, "w") do |io|
+    io.puts "#!/bin/sh"
+    io.puts "set -eu"
+    io.puts "exec bin/dbconsole test --no-psqlrc --quiet --file #{t.source}"
   end
 end
 
@@ -123,10 +153,7 @@ namespace :deps do
   end
 end
 
-task :spec => "spec:db"
-task :spec => "spec:integration"
-task :spec => "spec:revert"
-task :default => "spec"
+task :default => "spec:all"
 
 def dburl(env)
   `sqitch target show #{env} | grep URI | cut -d : -f 3-`.strip.sub(/^pg:/, "postgres:")
