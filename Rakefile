@@ -18,6 +18,18 @@ namespace :jwt do
 end
 
 namespace :db do
+  namespace :bootstrap do
+    desc "Destroys the test database, if it exists, and creates it from scratch"
+    task :test do
+      boostrap_env(:test)
+    end
+
+    desc "Destroys the development database, if it exists, and creates it from scratch"
+    task :development do
+      boostrap_env(:development)
+    end
+  end
+
   desc "Deploys the latest changes to the development database"
   task :deploy do
     sh "overmind stop postgrest worker"
@@ -117,7 +129,9 @@ file "spec/db/revert_deploy_spec.t" => "Rakefile" do |t|
     io.puts "#!/bin/sh"
     io.puts "set -eu"
     io.puts "echo '1..1'"
-    io.puts "sqitch rebase --verify --target test --plan-file db/sqitch.plan"
+    io.puts "sqitch revert --target test --plan-file db/sqitch-test.plan"
+    io.puts "sqitch rebase --target test --plan-file db/sqitch.plan --verify"
+    io.puts "sqitch deploy --target test --plan-file db/sqitch-test.plan --verify"
     io.puts "echo 'ok 1 Revert to root and deploy everything'"
     io.puts "exit 0"
   end
@@ -159,7 +173,7 @@ namespace :deps do
   end
 end
 
-task :default => "spec:all"
+task :default => %w( spec:clean spec:all )
 
 def dburl(env)
   `sqitch target show #{env} | grep URI | cut -d : -f 3-`.strip.sub(/^pg:/, "postgres:")
@@ -191,6 +205,12 @@ ENVS_TO_CONF_PATH = {
 }.freeze
 
 def reset_env(env)
+  sh "sqitch revert --plan-file db/sqitch-test.plan --target #{env}" if env.to_s == "test"
+  sh "sqitch rebase --target #{env}"
+  sh "sqitch deploy --plan-file db/sqitch-test.plan --target #{env}" if env.to_s == "test"
+end
+
+def boostrap_env(env)
   shortenv = ENVS_TO_SHORT.fetch(env)
 
   devuri = dburi(env)
@@ -211,6 +231,9 @@ def reset_env(env)
   transform = [ "sed", "s/%ENV%/#{env}/g" ].shelljoin
   apply     = [ "bin/dbconsole", "--dbname", pguri, "--no-psqlrc", "--quiet", "--file", "-" ].shelljoin
   sh "#{read} | #{transform} | #{apply}"
+
+  sh "sqitch deploy --target #{env}"
+  sh "sqitch deploy --plan-file db/sqitch-test.plan --target #{env}" if env.to_s == "test"
 end
 
 def rotate_secret(env)
