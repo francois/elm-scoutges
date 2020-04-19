@@ -212,8 +212,8 @@ def boostrap_env(env)
   apply     = [ "bin/dbconsole", "--dbname", pguri, "--no-psqlrc", "--quiet", "--file", "-" ].shelljoin
   sh "#{read} | #{transform} | #{apply}"
 
-  sh "sqitch deploy --target #{env}"
-  sh "sqitch deploy --plan-file db/sqitch-test.plan --target #{env}" if env.to_s == "test"
+  sh "sqitch --quiet deploy --target #{env}"
+  sh "sqitch --quiet deploy --plan-file db/sqitch-test.plan --target #{env}" if env.to_s == "test"
 end
 
 def rotate_secret(env)
