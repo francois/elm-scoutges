@@ -1,6 +1,6 @@
 --failures
 --jobs=9
---state=slow,save
+--state=save
 --recurse
 --rules='seq=spec/db/revert_deploy_spec.t'
 --rules='seq=spec/integration/**/*.t'
