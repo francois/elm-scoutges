@@ -99,11 +99,10 @@ namespace :spec do
     Rakefile
     spec/postgrest.conf
     db:test:prepare
-    deps:js
     spec:prepare
     .proverc
   )
-  integration_spec_deps = FileList["spec/integration/**/*_spec.js"].ext(".t") + %w(spec/screenshots spec/videos)
+  integration_spec_deps = FileList["spec/integration/**/*_spec.js"].ext(".t") + %w(spec/screenshots spec/videos deps:js)
   db_spec_deps          = FileList["spec/db/**/*_spec.sql"].ext(".t")
   ruby_spec_deps        = FileList["spec/ruby/**/*_spec.rb"].ext(".t")
 
