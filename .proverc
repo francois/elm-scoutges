@@ -1,0 +1,7 @@
+--failures
+--jobs 1
+--recurse
+--rules 'seq=spec/db/revert_deploy_spec.t'
+--rules 'seq=spec/integration/**/*.t'
+--rules 'par=spec/db/**/*.t'
+--shuffle

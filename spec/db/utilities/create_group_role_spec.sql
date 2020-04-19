@@ -1,7 +1,8 @@
 \i spec/db/setup.sql
 
 BEGIN;
-  SELECT plan(7);
+  SELECT plan(8);
+  SELECT lives_ok('SELECT api.purge()', 'purge all');
 
   PREPARE p1 AS SELECT create_group_role('; DROP TABLE groups; --');
   SELECT lives_ok('p1', 'can create little bobby tables group');

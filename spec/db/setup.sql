@@ -10,3 +10,4 @@
 -- This ensures that session_user is the correct user, and really tests
 -- that all SET ROLE will behave as on production
 \connect -reuse-previous=on - postgrest
+SET client_min_messages TO warning;

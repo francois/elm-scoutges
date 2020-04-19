@@ -81,7 +81,7 @@ end
 namespace :spec do
   desc "Removes all generated *.t files"
   task :clean do
-    rm_f FileList["spec/db/revert_deploy_spec.t"] + FileList["spec/integration/**/*_spec.js"].ext("t") + FileList["spec/db/**/*_spec.sql"].ext("t")
+    rm_f FileList["spec/integration/**/*_spec.js"].ext("t") + FileList["spec/db/**/*_spec.sql"].ext("t")
     rm_rf %w(spec/screenshots spec/videos)
   end
 
@@ -123,32 +123,6 @@ end
 
 directory "spec/screenshots"
 directory "spec/videos"
-
-file "spec/db/revert_deploy_spec.t" => "Rakefile" do |t|
-  File.open(t.name, "w") do |io|
-    io.puts "#!/bin/sh"
-    io.puts "set -eu"
-    io.puts "echo '1..1'"
-    io.puts "sqitch revert --target test --plan-file db/sqitch-test.plan"
-    io.puts "sqitch rebase --target test --plan-file db/sqitch.plan --verify"
-    io.puts "sqitch deploy --target test --plan-file db/sqitch-test.plan --verify"
-    io.puts "echo 'ok 1 Revert to root and deploy everything'"
-    io.puts "exit 0"
-  end
-end
-
-file ".proverc" => "Rakefile" do |t|
-  File.open(t.name, "w") do |io|
-    io.puts "--failures"
-    io.puts "--jobs 1"
-    io.puts "--recurse"
-    io.puts "--rules 'seq=spec/db/revert_deploy_spec.t'"
-    io.puts "--rules 'par=spec/db/**/*.t'"
-    io.puts "--shuffle"
-    io.puts "--timer"
-    io.puts "--verbose"
-  end
-end
 
 rule ".t" => ".js" do |t|
   File.open(t.name, "w") do |io|
@@ -205,9 +179,9 @@ ENVS_TO_CONF_PATH = {
 }.freeze
 
 def reset_env(env)
-  sh "sqitch revert --plan-file db/sqitch-test.plan --target #{env}" if env.to_s == "test"
-  sh "sqitch rebase --target #{env}"
-  sh "sqitch deploy --plan-file db/sqitch-test.plan --target #{env}" if env.to_s == "test"
+  sh "sqitch --quiet revert --plan-file db/sqitch-test.plan --target #{env}" if env.to_s == "test"
+  sh "sqitch --quiet rebase --target #{env}"
+  sh "sqitch --quiet deploy --plan-file db/sqitch-test.plan --target #{env}" if env.to_s == "test"
 end
 
 def boostrap_env(env)

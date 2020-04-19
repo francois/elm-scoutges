@@ -1,7 +1,8 @@
 \i spec/db/setup.sql
 
 BEGIN;
-  SELECT plan(5);
+  SELECT plan(6);
+  SELECT lives_ok('SELECT api.purge()', 'purge all');
 
   SET LOCAL ROLE TO anonymous;
     PREPARE p1 AS SELECT api.register($1, 'monkeymonkey', $2, 'Bob ' || random(), '');

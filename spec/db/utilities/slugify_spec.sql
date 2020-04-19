@@ -1,7 +1,8 @@
 \i spec/db/setup.sql
 
 BEGIN;
-  SELECT plan(11);
+  SELECT plan(12);
+  SELECT lives_ok('SELECT api.purge()', 'purge all');
 
   SELECT is(slugify(have), want, quote_ident(have))
   FROM (VALUES

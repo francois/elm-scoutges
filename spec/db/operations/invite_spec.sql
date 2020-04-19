@@ -1,7 +1,8 @@
 \i spec/db/setup.sql
 
 BEGIN;
-  SELECT plan(5);
+  SELECT plan(6);
+  SELECT lives_ok('SELECT api.purge()', 'purge all');
 
   PREPARE p1 AS SELECT api.register('francois@teksol.info', 'monkeymonkey', '1er Drummondville', 'François', '888 222-3333');
   SELECT lives_ok('p1');

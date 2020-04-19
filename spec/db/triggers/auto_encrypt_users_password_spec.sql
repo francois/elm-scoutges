@@ -1,7 +1,8 @@
 \i spec/db/setup.sql
 
 BEGIN;
-  SELECT plan(2);
+  SELECT plan(3);
+  SELECT lives_ok('SELECT api.purge()', 'purge all');
 
   SET LOCAL ROLE TO anonymous;
     PREPARE p1 AS SELECT api.register('carnival@teksol.info', 'somepassword', '10eme', '', '');
