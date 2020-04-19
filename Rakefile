@@ -45,23 +45,23 @@ namespace :db do
 
   namespace :test do
     desc "Destroys and creates a fresh new version of the test database"
-    task :prepare => "spec/tmp/deploy.txt"
+    task :prepare => %w( Rakefile spec/tmp/deploy.txt )
   end
 end
 
 directory "spec/tmp"
-file "spec/tmp/deploy.txt" => [ "Rakefile", "db/sqitch.plan", *Dir["db/deploy/**/*.sql"], "spec/postgrest.conf", "spec/tmp", "db/bootstrap.sql", "spec/db/init.sql" ] do
+file "spec/tmp/deploy.txt" => [ "Rakefile", "db/sqitch.plan", *Dir["db/deploy/**/*.sql"], "spec/postgrest.conf", "spec/tmp", "db/bootstrap.sql" ] do
   sh "overmind stop postgresttest"
   reset_env(:test)
-  rotate_secret(:test)
-  sh [ "sqitch", "--quiet", "deploy", "--target", "test" ].shelljoin
+  sh %w( sqitch --quiet deploy --plan-file db/sqitch.plan --target test ).shelljoin
+  sh %w( sqitch --quiet deploy --plan-file db/sqitch-test.plan --target test ).shelljoin
   sh "touch spec/tmp/deploy.txt"
   sh "overmind restart postgresttest"
 end
 
 file "spec/postgrest.conf" => %w( Rakefile postgrest.conf ) do
   sh "overmind stop postgresttest" rescue nil
-  sh "sed 's!:3002/scoutges_development!:4002/scoutges_test! ; s/3003/4003/' < postgrest.conf > spec/postgrest.conf"
+  sh "sed 's!:3002/scoutges_development!:4002/scoutges_test! ; s/3003/4003/ ; s/jwt-secret = .*/jwt-secret = \"simple-string\"/' < postgrest.conf > spec/postgrest.conf"
   sleep 1
   sh "overmind restart postgresttest" rescue nil
 end
@@ -69,12 +69,12 @@ end
 namespace :spec do
   desc "Removes all generated *.t files"
   task :clean do
-    rm_f FileList["spec/revert_deploy_spec.t"] + FileList["spec/**/*_spec.js"].ext("t") + FileList["spec/**/*_spec.sql"].ext("t")
+    rm_f FileList["spec/db/revert_deploy_spec.t"] + FileList["spec/integration/**/*_spec.js"].ext("t") + FileList["spec/db/**/*_spec.sql"].ext("t")
     rm_rf %w(spec/screenshots spec/videos)
   end
 
   desc "Generates *.t to enable prove to run over them"
-  task :prepare => %w( spec:clean spec/revert_deploy_spec.t ) + FileList["spec/**/*_spec.js"].ext(".t") + FileList["spec/**/*_spec.sql"].ext(".t")
+  task :prepare => %w( spec:clean spec/db/revert_deploy_spec.t ) + FileList["spec/integration/**/*_spec.js"].ext(".t") + FileList["spec/db/**/*_spec.sql"].ext(".t")
 
   base_spec_deps = %w(
     Rakefile
@@ -84,40 +84,40 @@ namespace :spec do
     spec:prepare
     .proverc
   )
-  integration_spec_deps = FileList["spec/**/*_spec.js"].ext(".t") + %w(spec/screenshots spec/videos)
-  db_spec_deps          = FileList["spec/**/*_spec.sql"].ext(".t")
-  ruby_spec_deps        = FileList["spec/**/*_spec.rb"].ext(".t")
+  integration_spec_deps = FileList["spec/integration/**/*_spec.js"].ext(".t") + %w(spec/screenshots spec/videos)
+  db_spec_deps          = FileList["spec/db/**/*_spec.sql"].ext(".t")
+  ruby_spec_deps        = FileList["spec/ruby/**/*_spec.rb"].ext(".t")
 
   desc "Runs all spec suites"
-  task :all => base_spec_deps + integration_spec_deps + db_spec_deps + ["spec/revert_deploy_spec.t"] + ruby_spec_deps do
-    sh "prove --recurse --shuffle --jobs 9 --failures spec"
+  task :all => base_spec_deps + integration_spec_deps + db_spec_deps + ["spec/db/revert_deploy_spec.t"] + ruby_spec_deps do
+    sh "prove spec"
   end
 
   desc "Runs the database specs"
-  task :db => base_spec_deps + db_spec_deps + ["spec/revert_deploy_spec.t"] do |t|
-    sh [ "prove", "--shuffle", "--jobs", "9", "--failures", *t.prerequisite_tasks.map(&:name).grep(/[.]t$/) ].shelljoin
+  task :db => base_spec_deps + db_spec_deps + ["spec/db/revert_deploy_spec.t"] do |t|
+    sh [ "prove", *t.prerequisite_tasks.map(&:name).grep(/[.]t$/) ].shelljoin
   end
 
   desc "Runs the integration specs"
   task :integration => base_spec_deps + integration_spec_deps do |t|
-    sh [ "prove", "--shuffle", "--jobs", "1", "--failures", *t.prerequisite_tasks.map(&:name).grep(/[.]t$/) ].shelljoin
+    sh [ "prove", *t.prerequisite_tasks.map(&:name).grep(/[.]t$/) ].shelljoin
   end
 
   desc "Runs the Ruby specs"
   task :ruby => base_spec_deps + ruby_spec_deps do |t|
-    sh [ "prove", "--shuffle", "--jobs", "9", "--failures", *t.prerequisite_tasks.map(&:name).grep(/[.]t$/) ].shelljoin
+    sh [ "prove", *t.prerequisite_tasks.map(&:name).grep(/[.]t$/) ].shelljoin
   end
 end
 
 directory "spec/screenshots"
 directory "spec/videos"
 
-file "spec/revert_deploy_spec.t" do |t|
-  File.write(t.name, "w") do |io|
-    io.puts "#/bin/bash"
+file "spec/db/revert_deploy_spec.t" => "Rakefile" do |t|
+  File.open(t.name, "w") do |io|
+    io.puts "#!/bin/sh"
     io.puts "set -eu"
     io.puts "echo '1..1'"
-    io.puts "sqitch --quiet rebase --verify --target test"
+    io.puts "sqitch rebase --verify --target test --plan-file db/sqitch.plan"
     io.puts "echo 'ok 1 Revert to root and deploy everything'"
     io.puts "exit 0"
   end
@@ -125,8 +125,14 @@ end
 
 file ".proverc" => "Rakefile" do |t|
   File.open(t.name, "w") do |io|
-    io.puts "--rules 'seq=spec/integration/**/*.t'"
-    io.puts "--rules 'par=**'"
+    io.puts "--failures"
+    io.puts "--jobs 1"
+    io.puts "--recurse"
+    io.puts "--rules 'seq=spec/db/revert_deploy_spec.t'"
+    io.puts "--rules 'par=spec/db/**/*.t'"
+    io.puts "--shuffle"
+    io.puts "--timer"
+    io.puts "--verbose"
   end
 end
 
@@ -149,7 +155,7 @@ end
 namespace :deps do
   desc "Installs any missing dependencies"
   task :js => %w( package.json yarn.lock ) do
-    sh "yarn install"
+    sh "yarn install --silent"
   end
 end
 
@@ -196,7 +202,7 @@ def reset_env(env)
   sleep 1
   rm_rf "db/cluster-#{shortenv}"
   sleep 1
-  sh "initdb > /dev/null --data-checksums --no-sync --pgdata db/cluster-#{shortenv}"
+  sh "initdb > /dev/null 2>&1 --data-checksums --no-sync --pgdata db/cluster-#{shortenv}"
   sh "echo \"log_statement = 'all'\" >> db/cluster-#{shortenv}/postgresql.conf"
   sh "overmind restart pg#{shortenv}"
   sleep 1

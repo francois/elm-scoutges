@@ -1,0 +1,5 @@
+%syntax-version=1.0.0
+%project=scoutges-test
+
+extensions/pgtap 2020-04-19T15:34:39Z François Beausoleil <francois@teksol.info> # Install the pgTAP extension
+config/jwt 2020-04-19T15:36:19Z François Beausoleil <francois@teksol.info> # Update DB config for faster testing
