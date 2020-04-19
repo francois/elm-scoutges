@@ -21,6 +21,8 @@ log
 
 # Temporary files used by the test harness
 spec/tmp
+spec/screenshots
+spec/videos
 
 .byebug_history
 
