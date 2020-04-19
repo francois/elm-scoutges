@@ -44,6 +44,13 @@ namespace :db do
     sh "overmind restart postgrest"
   end
 
+  desc "Rollsback the most recent change to the development database"
+  task :rollback do
+    sh "overmind stop postgrest worker"
+    sh ["sqitch", "revert", "HEAD^"].shelljoin
+    sh "overmind restart postgrest"
+  end
+
   desc "Destroys the local database and creates a new one"
   task :reset do
     sh "overmind stop postgrestdev worker"
