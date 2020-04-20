@@ -42,10 +42,8 @@ let app = Elm.Main.init({
 app.ports.manageJwtToken.subscribe(function(tuple) {
   if (storageAvailable("localStorage")) {
     if (tuple[0] == "set") {
-      console.log("set")
       localStorage.setItem("jwt-token", tuple[1]);
     } else if (tuple[0] == "clear" ) {
-      console.log("clear")
       localStorage.removeItem("jwt-token");
     }
   }

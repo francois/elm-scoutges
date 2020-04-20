@@ -92,13 +92,7 @@ init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
     case Parser.parse routeParser url of
         Just SignIn ->
-            ( { authenticationState = Anonymous
-              , users = Nothing
-              , key = key
-              , route = ( SignIn, Just (SignInData newSignInRequest) )
-              }
-            , manageJwtToken ( "clear", "" )
-            )
+            initWithSignIn key
 
         Just Register ->
             ( { authenticationState = Anonymous
@@ -113,50 +107,41 @@ init flags url key =
             case flags.token of
                 Just token ->
                     case parseJWT token of
-                        Ok _ ->
-                            ( { authenticationState = Authenticated token
-                              , users = Nothing
-                              , key = key
-                              , route = ( Dashboard, Nothing )
-                              }
-                            , Nav.replaceUrl key (buildUrl Dashboard)
-                            )
+                        Ok details ->
+                            if flags.now < details.exp then
+                                ( { authenticationState = Authenticated token
+                                  , users = Nothing
+                                  , key = key
+                                  , route = ( Dashboard, Nothing )
+                                  }
+                                , Nav.replaceUrl key (buildUrl Dashboard)
+                                )
+
+                            else
+                                initWithSignIn key
 
                         Err _ ->
-                            ( { authenticationState = Anonymous
-                              , users = Nothing
-                              , key = key
-                              , route = ( SignIn, Just (SignInData newSignInRequest) )
-                              }
-                            , Cmd.batch
-                                [ manageJwtToken ( "clear", "" )
-                                , Nav.replaceUrl key (buildUrl SignIn)
-                                ]
-                            )
+                            initWithSignIn key
 
                 Nothing ->
-                    ( { authenticationState = Anonymous
-                      , users = Nothing
-                      , key = key
-                      , route = ( SignIn, Just (SignInData newSignInRequest) )
-                      }
-                    , Cmd.batch
-                        [ manageJwtToken ( "clear", "" )
-                        , Nav.replaceUrl key (buildUrl SignIn)
-                        ]
-                    )
+                    initWithSignIn key
 
         Nothing ->
-            ( { authenticationState = Anonymous
-              , users = Nothing
-              , key = key
-              , route = ( SignIn, Just (SignInData newSignInRequest) )
-              }
-            , Cmd.batch
-                [ manageJwtToken ( "clear", "" )
-                , Nav.replaceUrl key (buildUrl SignIn)
-                ]
-            )
+            initWithSignIn key
+
+
+initWithSignIn : Nav.Key -> ( Model, Cmd Msg )
+initWithSignIn key =
+    ( { authenticationState = Anonymous
+      , users = Nothing
+      , key = key
+      , route = ( SignIn, Just (SignInData newSignInRequest) )
+      }
+    , Cmd.batch
+        [ manageJwtToken ( "clear", "" )
+        , Nav.replaceUrl key (buildUrl SignIn)
+        ]
+    )
 
 
 type JwtError
@@ -168,54 +153,6 @@ type alias JwtDetails =
     , sub : String
     , jti : String
     }
-
-
-parseJWT : JwtToken -> Result JwtError JwtDetails
-parseJWT token =
-    let
-        parts =
-            String.split "." token
-
-        jsondata =
-            case parts of
-                hdr :: data :: sig ->
-                    Base64.decode data
-
-                [ _ ] ->
-                    Err "JWT syntax error"
-
-                [] ->
-                    Err "JWT syntax error"
-
-        parseddata : Result JwtError JwtDetails
-        parseddata =
-            case jsondata of
-                Ok str ->
-                    let
-                        parsed : Result Decode.Error JwtDetails
-                        parsed =
-                            Decode.decodeString jwtDecoder str
-                    in
-                    case parsed of
-                        Ok jwt ->
-                            Ok jwt
-
-                        Err (Decode.Field name cause) ->
-                            Err (FailedJWTDecode ("Failed to decode [" ++ name ++ "]"))
-
-                        Err (Decode.Index idx cause) ->
-                            Err (FailedJWTDecode ("Failed to decode at index " ++ String.fromInt idx))
-
-                        Err (Decode.OneOf causes) ->
-                            Err (FailedJWTDecode ("Failed to decode one of " ++ String.fromInt (List.length causes) ++ "variants"))
-
-                        Err (Decode.Failure error value) ->
-                            Err (FailedJWTDecode ("Failed to decode: " ++ error))
-
-                Err reason ->
-                    Err (FailedJWTDecode reason)
-    in
-    parseddata
 
 
 newSignInRequest : SignInForm
@@ -764,6 +701,58 @@ userDecoder =
 userListDecoder : Decode.Decoder (List User)
 userListDecoder =
     Decode.list userDecoder
+
+
+
+---- Parsers ----
+
+
+parseJWT : JwtToken -> Result JwtError JwtDetails
+parseJWT token =
+    let
+        parts =
+            String.split "." token
+
+        jsondata =
+            case parts of
+                hdr :: data :: sig ->
+                    Base64.decode data
+
+                [ _ ] ->
+                    Err "JWT syntax error"
+
+                [] ->
+                    Err "JWT syntax error"
+
+        parseddata : Result JwtError JwtDetails
+        parseddata =
+            case jsondata of
+                Ok str ->
+                    let
+                        parsed : Result Decode.Error JwtDetails
+                        parsed =
+                            Decode.decodeString jwtDecoder str
+                    in
+                    case parsed of
+                        Ok jwt ->
+                            Ok jwt
+
+                        Err (Decode.Field name cause) ->
+                            Err (FailedJWTDecode ("Failed to decode [" ++ name ++ "]"))
+
+                        Err (Decode.Index idx cause) ->
+                            Err (FailedJWTDecode ("Failed to decode at index " ++ String.fromInt idx))
+
+                        Err (Decode.OneOf causes) ->
+                            Err (FailedJWTDecode ("Failed to decode one of " ++ String.fromInt (List.length causes) ++ "variants"))
+
+                        Err (Decode.Failure error value) ->
+                            Err (FailedJWTDecode ("Failed to decode: " ++ error))
+
+                Err reason ->
+                    Err (FailedJWTDecode reason)
+    in
+    parseddata
 
 
 
