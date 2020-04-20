@@ -154,6 +154,7 @@ namespace :deps do
   end
 end
 
+task :spec    => %w( spec:all )
 task :default => %w( spec:clean spec:all )
 
 def dburl(env)
