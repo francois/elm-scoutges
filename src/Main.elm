@@ -15,6 +15,8 @@ import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Url
+import Url.Builder as Builder
+import Url.Parser as Parser
 
 
 
@@ -26,11 +28,10 @@ type alias Flags =
 
 
 type alias Model =
-    { formState : FormState
-    , authenticationState : AuthenticationState
+    { authenticationState : AuthenticationState
     , users : Maybe (List User)
     , key : Nav.Key
-    , url : Url.Url
+    , route : Route
     }
 
 
@@ -48,15 +49,10 @@ type alias JwtToken =
 
 
 type AuthenticationState
-    = Unknown
+    = Anonymous
     | InProgress
     | Failed
     | Authenticated JwtToken
-
-
-type FormState
-    = FillingRegistrationForm RegistrationRequest
-    | FillingSignInForm SignInRequest
 
 
 type alias RegistrationResponse =
@@ -64,7 +60,7 @@ type alias RegistrationResponse =
     }
 
 
-type alias RegistrationRequest =
+type alias RegistrationForm =
     { email : String
     , password : String
     , name : String
@@ -78,7 +74,7 @@ type alias SignInResponse =
     }
 
 
-type alias SignInRequest =
+type alias SignInForm =
     { email : String
     , password : String
     }
@@ -86,34 +82,41 @@ type alias SignInRequest =
 
 init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
+    let
+        route =
+            case Parser.parse routeParser url of
+                Just x ->
+                    x
+
+                Nothing ->
+                    SignIn
+    in
     case flags.token of
         Just token ->
-            ( { formState = FillingSignInForm newSignInRequest
-              , authenticationState = Authenticated token
+            ( { authenticationState = Authenticated token
               , users = Nothing
               , key = key
-              , url = url
+              , route = route
               }
             , Cmd.none
             )
 
         Nothing ->
-            ( { formState = FillingSignInForm newSignInRequest
-              , authenticationState = Unknown
+            ( { authenticationState = Anonymous
               , users = Nothing
               , key = key
-              , url = url
+              , route = route
               }
             , Cmd.none
             )
 
 
-newSignInRequest : SignInRequest
+newSignInRequest : SignInForm
 newSignInRequest =
     { email = "", password = "" }
 
 
-newRegistrationRequest : RegistrationRequest
+newRegistrationRequest : RegistrationForm
 newRegistrationRequest =
     { email = "", password = "", groupName = "", name = "", phone = "" }
 
@@ -128,86 +131,86 @@ type Msg
     | SetName String
     | SetGroupName String
     | SetPhone String
-    | RunSignIn SignInRequest
-    | RunRegister RegistrationRequest
+    | RunSignIn SignInForm
+    | RunRegister RegistrationForm
     | SignInResult (Result Http.Error SignInResponse)
     | RegisterResult (Result Http.Error RegistrationResponse)
-    | ChangeFormState FormState
     | UsersLoaded (Result Http.Error (List User))
     | LinkClicked Browser.UrlRequest
     | UrlChanged Url.Url
+    | Go Route
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         SetPassword str ->
-            case model.formState of
-                FillingSignInForm req ->
-                    let
-                        newReq =
-                            { req | password = str }
-                    in
-                    ( { model | formState = FillingSignInForm newReq }, Cmd.none )
-
-                FillingRegistrationForm req ->
-                    let
-                        newReq =
-                            { req | password = str }
-                    in
-                    ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
+            -- case model.route of
+            --     FillingSignInForm req ->
+            --         let
+            --             newReq =
+            --                 { req | password = str }
+            --         in
+            --         ( { model | formState = FillingSignInForm newReq }, Cmd.none )
+            --     FillingRegistrationForm req ->
+            --         let
+            --             newReq =
+            --                 { req | password = str }
+            --         in
+            --         ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
+            ( model, Cmd.none )
 
         SetEmail str ->
-            case model.formState of
-                FillingSignInForm req ->
-                    let
-                        newReq =
-                            { req | email = str }
-                    in
-                    ( { model | formState = FillingSignInForm newReq }, Cmd.none )
-
-                FillingRegistrationForm req ->
-                    let
-                        newReq =
-                            { req | email = str }
-                    in
-                    ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
+            --case model.formState of
+            --    FillingSignInForm req ->
+            --        let
+            --            newReq =
+            --                { req | email = str }
+            --        in
+            --        ( { model | formState = FillingSignInForm newReq }, Cmd.none )
+            --    FillingRegistrationForm req ->
+            --        let
+            --            newReq =
+            --                { req | email = str }
+            --        in
+            --        ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
+            ( model, Cmd.none )
 
         SetName str ->
-            case model.formState of
-                FillingRegistrationForm req ->
-                    let
-                        newReq =
-                            { req | name = str }
-                    in
-                    ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
-
-                _ ->
-                    ( model, Cmd.none )
+            -- case model.formState of
+            --     FillingRegistrationForm req ->
+            --         let
+            --             newReq =
+            --                 { req | name = str }
+            --         in
+            --         ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
+            --     _ ->
+            --         ( model, Cmd.none )
+            ( model, Cmd.none )
 
         SetPhone str ->
-            case model.formState of
-                FillingRegistrationForm req ->
-                    let
-                        newReq =
-                            { req | phone = str }
-                    in
-                    ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
-
-                _ ->
-                    ( model, Cmd.none )
+            --case model.formState of
+            --    FillingRegistrationForm req ->
+            --        let
+            --            newReq =
+            --                { req | phone = str }
+            --        in
+            --        ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
+            --    _ ->
+            --        ( model, Cmd.none )
+            ( model, Cmd.none )
 
         SetGroupName str ->
-            case model.formState of
-                FillingRegistrationForm req ->
-                    let
-                        newReq =
-                            { req | groupName = str }
-                    in
-                    ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
-
-                _ ->
-                    ( model, Cmd.none )
+            --case model.formState of
+            --    FillingRegistrationForm req ->
+            --        let
+            --            newReq =
+            --                { req | groupName = str }
+            --        in
+            --        ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
+            --    _ ->
+            --        ( model, Cmd.none )
+            ( model, Cmd.none )
 
         RunSignIn req ->
             ( { model | authenticationState = InProgress }, signIn req )
@@ -229,9 +232,6 @@ update msg model =
         RegisterResult (Err _) ->
             ( { model | authenticationState = Failed }, Cmd.none )
 
-        ChangeFormState newState ->
-            ( { model | formState = newState, authenticationState = Unknown }, Cmd.none )
-
         UsersLoaded (Ok users) ->
             ( { model | users = Just users }, Cmd.none )
 
@@ -247,9 +247,21 @@ update msg model =
                     ( model, Nav.load href )
 
         UrlChanged url ->
-            ( { model | url = url }
+            let
+                route =
+                    case Parser.parse routeParser url of
+                        Just x ->
+                            x
+
+                        Nothing ->
+                            SignIn
+            in
+            ( { model | route = route }
             , Cmd.none
             )
+
+        Go route ->
+            ( model, Nav.pushUrl model.key (buildUrl route) )
 
 
 
@@ -268,11 +280,11 @@ view model =
                     False
 
         heightPx =
-            case model.formState of
-                FillingRegistrationForm _ ->
+            case model.route of
+                Register ->
                     576
 
-                FillingSignInForm _ ->
+                _ ->
                     352
 
         body =
@@ -289,12 +301,15 @@ view model =
                 _ ->
                     let
                         form =
-                            case model.formState of
-                                FillingRegistrationForm req ->
-                                    registerFormView req failed
+                            case model.route of
+                                Register ->
+                                    registerFormView newRegistrationRequest failed
 
-                                FillingSignInForm req ->
-                                    signInFormView req failed
+                                SignIn ->
+                                    signInFormView newSignInRequest failed
+
+                                _ ->
+                                    el [] (text "oops")
                     in
                     column [ spacing 16, centerY, centerX, Background.color gray7, height (Element.px heightPx) ]
                         [ signInOrAuthenticateTabView model
@@ -366,23 +381,23 @@ signInOrAuthenticateTabView : Model -> Element Msg
 signInOrAuthenticateTabView model =
     let
         ( bgCol1, bgCol2 ) =
-            case model.formState of
-                FillingRegistrationForm _ ->
+            case model.route of
+                Register ->
                     ( gray6, gray7 )
 
-                FillingSignInForm _ ->
+                _ ->
                     ( gray7, gray6 )
     in
     row [ width fill, Region.heading 1, Font.size 32, Background.color gray6 ]
         [ el [ padding 8, width (Element.fillPortion 1), Background.color bgCol1 ]
             (Input.button [ centerX, width fill, height fill ]
-                { onPress = Just (ChangeFormState (FillingSignInForm newSignInRequest))
+                { onPress = Just (Go SignIn)
                 , label = text "Sign In"
                 }
             )
         , el [ padding 8, width (Element.fillPortion 1), Background.color bgCol2 ]
             (Input.button [ centerX, width fill, height fill ]
-                { onPress = Just (ChangeFormState (FillingRegistrationForm newRegistrationRequest))
+                { onPress = Just (Go Register)
                 , label = text "Register"
                 }
             )
@@ -397,7 +412,7 @@ spinner =
         }
 
 
-registerFormView : RegistrationRequest -> Bool -> Element Msg
+registerFormView : RegistrationForm -> Bool -> Element Msg
 registerFormView req failed =
     column [ padding 8, spacing 8, width fill ]
         [ Input.text [ onEnter (RunRegister req) ]
@@ -452,7 +467,7 @@ registerFormView req failed =
         ]
 
 
-signInFormView : SignInRequest -> Bool -> Element Msg
+signInFormView : SignInForm -> Bool -> Element Msg
 signInFormView req failed =
     column [ padding 8, spacing 8, width fill ]
         [ Input.email [ onEnter (RunSignIn req) ]
@@ -575,7 +590,7 @@ onEnter msg =
 ---- JSON Encoders & Decoders ----
 
 
-authenticationRequestEncoder : SignInRequest -> Encode.Value
+authenticationRequestEncoder : SignInForm -> Encode.Value
 authenticationRequestEncoder req =
     Encode.object
         [ ( "email", Encode.string req.email )
@@ -588,7 +603,7 @@ authenticationResponseDecoder =
     Decode.map SignInResponse (Decode.field "token" Decode.string)
 
 
-registrationRequestEncoder : RegistrationRequest -> Encode.Value
+registrationRequestEncoder : RegistrationForm -> Encode.Value
 registrationRequestEncoder req =
     Encode.object
         [ ( "email", Encode.string req.email )
@@ -623,7 +638,7 @@ userListDecoder =
 ---- Commands ----
 
 
-register : RegistrationRequest -> Cmd Msg
+register : RegistrationForm -> Cmd Msg
 register req =
     Http.post
         { url = "/api/rpc/register"
@@ -632,7 +647,7 @@ register req =
         }
 
 
-signIn : SignInRequest -> Cmd Msg
+signIn : SignInForm -> Cmd Msg
 signIn req =
     Http.post
         { url = "/api/rpc/sign_in"
@@ -657,6 +672,38 @@ getAllUsers token =
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.none
+
+
+
+---- ROUTING ----
+
+
+type Route
+    = SignIn
+    | Register
+    | Dashboard
+
+
+buildUrl : Route -> String
+buildUrl route =
+    case route of
+        SignIn ->
+            Builder.absolute [ "sign-in" ] []
+
+        Register ->
+            Builder.absolute [ "register" ] []
+
+        Dashboard ->
+            Builder.absolute [ "dashboard" ] []
+
+
+routeParser : Parser.Parser (Route -> a) a
+routeParser =
+    Parser.oneOf
+        [ Parser.map SignIn (Parser.s "sign-in")
+        , Parser.map Register (Parser.s "register")
+        , Parser.map Dashboard (Parser.s "dashboard")
+        ]
 
 
 
