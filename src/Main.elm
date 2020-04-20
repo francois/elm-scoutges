@@ -1,8 +1,9 @@
 module Main exposing (main)
 
 import Browser
+import Browser.Navigation as Nav
 import Debug
-import Element exposing (Element, Color, alignLeft, alignRight, alignTop, centerX, centerY, column, el, fill, height, padding, px, rgb255, row, spacing, text, width)
+import Element exposing (Color, Element, alignLeft, alignRight, alignTop, centerX, centerY, column, el, fill, height, padding, px, rgb255, row, spacing, text, width)
 import Element.Background as Background
 import Element.Font as Font
 import Element.Input as Input
@@ -12,6 +13,7 @@ import Html.Events
 import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
+import Url
 
 
 
@@ -22,6 +24,8 @@ type alias Model =
     { formState : FormState
     , authenticationState : AuthenticationState
     , users : Maybe (List User)
+    , key : Nav.Key
+    , url : Url.Url
     }
 
 
@@ -75,9 +79,16 @@ type alias SignInRequest =
     }
 
 
-init : ( Model, Cmd Msg )
-init =
-    ( { formState = FillingSignInForm newSignInRequest, authenticationState = Unknown, users = Nothing }, Cmd.none )
+init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+init flags url key =
+    ( { formState = FillingSignInForm newSignInRequest
+      , authenticationState = Unknown
+      , users = Nothing
+      , key = key
+      , url = url
+      }
+    , Cmd.none
+    )
 
 
 newSignInRequest : SignInRequest
@@ -106,6 +117,8 @@ type Msg
     | RegisterResult (Result Http.Error RegistrationResponse)
     | ChangeFormState FormState
     | UsersLoaded (Result Http.Error (List User))
+    | LinkClicked Browser.UrlRequest
+    | UrlChanged Url.Url
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -206,12 +219,25 @@ update msg model =
         UsersLoaded (Err _) ->
             ( model, Cmd.none )
 
+        LinkClicked urlRequest ->
+            case urlRequest of
+                Browser.Internal url ->
+                    ( model, Nav.pushUrl model.key (Url.toString url) )
+
+                Browser.External href ->
+                    ( model, Nav.load href )
+
+        UrlChanged url ->
+            ( { model | url = url }
+            , Cmd.none
+            )
+
 
 
 ---- VIEW ----
 
 
-view : Model -> Html.Html Msg
+view : Model -> Browser.Document Msg
 view model =
     let
         failed =
@@ -256,7 +282,9 @@ view model =
                         , el [ width (fill |> Element.minimum 400 |> Element.maximum 480) ] form
                         ]
     in
-    Element.layout [ Font.color gray1, Background.color white, centerX ] body
+    { title = "URL Interceptor"
+    , body = [ Element.layout [ Font.color gray1, Background.color white, centerX ] body ]
+    }
 
 
 authenticatedView : Model -> Element Msg
@@ -442,7 +470,7 @@ signInFormView req failed =
         ]
 
 
-callToActionTextColor :   Color
+callToActionTextColor : Color
 callToActionTextColor =
     white
 
@@ -452,47 +480,57 @@ callToActionBackgroundColor =
     rgb255 32 32 240
 
 
-black :   Color
+black : Color
 black =
     rgb255 0 0 0
 
-gray0 :  Color
+
+gray0 : Color
 gray0 =
     black
 
-gray1:  Color
+
+gray1 : Color
 gray1 =
     rgb255 32 32 32
 
-gray2:Color
+
+gray2 : Color
 gray2 =
     rgb255 64 64 64
 
-gray3:Color
+
+gray3 : Color
 gray3 =
     rgb255 96 96 96
 
-gray4:Color
+
+gray4 : Color
 gray4 =
     rgb255 128 128 128
 
-gray5:Color
+
+gray5 : Color
 gray5 =
     rgb255 160 160 160
 
-gray6:Color
+
+gray6 : Color
 gray6 =
     rgb255 192 192 192
 
-gray7:Color
+
+gray7 : Color
 gray7 =
     rgb255 224 224 224
 
-gray8:Color
+
+gray8 : Color
 gray8 =
     white
 
-white:Color
+
+white : Color
 white =
     rgb255 255 255 255
 
@@ -597,15 +635,22 @@ getAllUsers token =
         }
 
 
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    Sub.none
+
+
 
 ---- PROGRAM ----
 
 
 main : Program () Model Msg
 main =
-    Browser.element
-        { view = view
-        , init = \_ -> init
+    Browser.application
+        { init = init
+        , view = view
         , update = update
-        , subscriptions = always Sub.none
+        , subscriptions = subscriptions
+        , onUrlChange = UrlChanged
+        , onUrlRequest = LinkClicked
         }
