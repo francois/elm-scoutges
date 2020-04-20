@@ -126,11 +126,11 @@ newRegistrationRequest =
 
 
 type Msg
-    = SetEmail String
-    | SetPassword String
-    | SetName String
-    | SetGroupName String
-    | SetPhone String
+    = FillInEmail String
+    | FillInPassword String
+    | FillInName String
+    | FillInGroupName String
+    | FillInPhone String
     | RunSignIn SignInForm
     | RunRegister RegistrationForm
     | SignInResult (Result Http.Error SignInResponse)
@@ -144,7 +144,7 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        SetPassword str ->
+        FillInPassword str ->
             -- case model.route of
             --     FillingSignInForm req ->
             --         let
@@ -160,7 +160,7 @@ update msg model =
             --         ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
             ( model, Cmd.none )
 
-        SetEmail str ->
+        FillInEmail str ->
             --case model.formState of
             --    FillingSignInForm req ->
             --        let
@@ -176,7 +176,7 @@ update msg model =
             --        ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
             ( model, Cmd.none )
 
-        SetName str ->
+        FillInName str ->
             -- case model.formState of
             --     FillingRegistrationForm req ->
             --         let
@@ -188,7 +188,7 @@ update msg model =
             --         ( model, Cmd.none )
             ( model, Cmd.none )
 
-        SetPhone str ->
+        FillInPhone str ->
             --case model.formState of
             --    FillingRegistrationForm req ->
             --        let
@@ -200,7 +200,7 @@ update msg model =
             --        ( model, Cmd.none )
             ( model, Cmd.none )
 
-        SetGroupName str ->
+        FillInGroupName str ->
             --case model.formState of
             --    FillingRegistrationForm req ->
             --        let
@@ -416,31 +416,31 @@ registerFormView : RegistrationForm -> Bool -> Element Msg
 registerFormView req failed =
     column [ padding 8, spacing 8, width fill ]
         [ Input.text [ onEnter (RunRegister req) ]
-            { onChange = SetGroupName
+            { onChange = FillInGroupName
             , text = req.groupName
             , placeholder = Nothing
             , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Group Name")
             }
         , Input.text [ onEnter (RunRegister req) ]
-            { onChange = SetName
+            { onChange = FillInName
             , text = req.name
             , placeholder = Nothing
             , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Name")
             }
         , Input.text [ onEnter (RunRegister req) ]
-            { onChange = SetPhone
+            { onChange = FillInPhone
             , text = req.phone
             , placeholder = Nothing
             , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Phone")
             }
         , Input.email [ onEnter (RunRegister req) ]
-            { onChange = SetEmail
+            { onChange = FillInEmail
             , text = req.email
             , placeholder = Nothing
             , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Email")
             }
         , Input.newPassword [ onEnter (RunRegister req) ]
-            { onChange = SetPassword
+            { onChange = FillInPassword
             , show = False
             , text = req.password
             , placeholder = Nothing
@@ -471,13 +471,13 @@ signInFormView : SignInForm -> Bool -> Element Msg
 signInFormView req failed =
     column [ padding 8, spacing 8, width fill ]
         [ Input.email [ onEnter (RunSignIn req) ]
-            { onChange = SetEmail
+            { onChange = FillInEmail
             , text = req.email
             , placeholder = Nothing
             , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Email")
             }
         , Input.currentPassword [ onEnter (RunSignIn req) ]
-            { onChange = SetPassword
+            { onChange = FillInPassword
             , show = False
             , text = req.password
             , placeholder = Nothing
