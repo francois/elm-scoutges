@@ -1,7 +1,8 @@
-module Main exposing (main)
+port module Main exposing (main)
 
 import Browser
 import Browser.Navigation as Nav
+import Cmd.Extra
 import Debug
 import Element exposing (Color, Element, alignLeft, alignRight, alignTop, centerX, centerY, column, el, fill, height, padding, px, rgb255, row, spacing, text, width)
 import Element.Background as Background
@@ -18,6 +19,10 @@ import Url
 
 
 ---- MODEL ----
+
+
+type alias Flags =
+    { token : Maybe JwtToken }
 
 
 type alias Model =
@@ -79,16 +84,28 @@ type alias SignInRequest =
     }
 
 
-init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
-    ( { formState = FillingSignInForm newSignInRequest
-      , authenticationState = Unknown
-      , users = Nothing
-      , key = key
-      , url = url
-      }
-    , Cmd.none
-    )
+    case flags.token of
+        Just token ->
+            ( { formState = FillingSignInForm newSignInRequest
+              , authenticationState = Authenticated token
+              , users = Nothing
+              , key = key
+              , url = url
+              }
+            , Cmd.none
+            )
+
+        Nothing ->
+            ( { formState = FillingSignInForm newSignInRequest
+              , authenticationState = Unknown
+              , users = Nothing
+              , key = key
+              , url = url
+              }
+            , Cmd.none
+            )
 
 
 newSignInRequest : SignInRequest
@@ -199,13 +216,15 @@ update msg model =
             ( { model | authenticationState = InProgress }, register req )
 
         SignInResult (Ok resp) ->
-            ( { model | authenticationState = Authenticated resp.token }, getAllUsers resp.token )
+            { model | authenticationState = Authenticated resp.token }
+                |> Cmd.Extra.withCmds [ getAllUsers resp.token, storeJwtToken resp.token ]
 
         SignInResult (Err _) ->
             ( { model | authenticationState = Failed }, Cmd.none )
 
         RegisterResult (Ok resp) ->
-            ( { model | authenticationState = Authenticated resp.token }, getAllUsers resp.token )
+            { model | authenticationState = Authenticated resp.token }
+                |> Cmd.Extra.withCmds [ getAllUsers resp.token, storeJwtToken resp.token ]
 
         RegisterResult (Err _) ->
             ( { model | authenticationState = Failed }, Cmd.none )
@@ -641,10 +660,17 @@ subscriptions _ =
 
 
 
+---- PORTS ----
+
+
+port storeJwtToken : String -> Cmd msg
+
+
+
 ---- PROGRAM ----
 
 
-main : Program () Model Msg
+main : Program Flags Model Msg
 main =
     Browser.application
         { init = init
