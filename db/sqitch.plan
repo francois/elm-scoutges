@@ -32,7 +32,8 @@ views/users [tables/users schemas/api] 2020-04-10T13:00:22Z François Beausoleil
 grants/views/users [views/users] 2020-04-10T13:00:31Z François Beausoleil <francois@teksol.info> # Only authenticated can view users
 functions/generate_serial_no 2020-04-19T20:30:08Z François Beausoleil <francois@teksol.info> # A function to generate random looking serial numbers
 sequences/order_nos 2020-04-19T20:42:46Z François Beausoleil <francois@teksol.info> # A sequence for public-facing order numbers
-tables/parties [functions/generate_serial_no tables/groups] 2020-04-19T20:45:39Z François Beausoleil <francois@teksol.info> # The list of parties that this scouting group does business with, including their troops
+enums/party_type 2020-04-20T21:33:05Z François Beausoleil <francois@teksol.info> # A list of enums that segment parties
+tables/parties [enums/party_type functions/generate_serial_no tables/groups] 2020-04-19T20:45:39Z François Beausoleil <francois@teksol.info> # The list of parties that this scouting group does business with, including their troops
 tables/party_addresses [tables/groups tables/parties] 2020-04-19T20:57:03Z François Beausoleil <francois@teksol.info> # The list of addresses of individual parties
 tables/orders [tables/parties tables/party_addresses sequences/order_nos] 2020-04-19T21:01:20Z François Beausoleil <francois@teksol.info> # Describes the different orders of a scout group
 acls/tables/parties [tables/parties] 2020-04-19T21:40:34Z François Beausoleil <francois@teksol.info> # Grants and policies related to the parties table
