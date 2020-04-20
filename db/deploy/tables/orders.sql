@@ -1,6 +1,6 @@
 -- Deploy scoutges:tables/orders to pg
--- requires: tables/customers
--- requires: tables/customer_addresses
+-- requires: tables/parties
+-- requires: tables/party_addresses
 -- requires: sequences/order_nos
 
 SET client_min_messages TO 'warning';
@@ -12,8 +12,8 @@ BEGIN;
 
     , name text not null
     , slug text not null unique default generate_serial_nos(8)
-    , customer_slug text not null
-        references public.customers(slug) on update cascade on delete restrict
+    , party_slug text not null
+        references public.parties(slug) on update cascade on delete restrict
     , ship_to text not null
     , bill_to text not null
 
@@ -34,11 +34,11 @@ BEGIN;
     , constraint start_on_before_end_on check(start_on <= end_on)
     , constraint end_on_before_return_on check(end_on <= return_on)
 
-    , foreign key(customer_slug, ship_to)
-        references public.customer_addresses(customer_slug, name)
+    , foreign key(party_slug, ship_to)
+        references public.party_addresses(party_slug, name)
         on update cascade on delete restrict
-    , foreign key(customer_slug, bill_to)
-        references public.customer_addresses(customer_slug, name)
+    , foreign key(party_slug, bill_to)
+        references public.party_addresses(party_slug, name)
         on update cascade on delete restrict
   );
 

@@ -1,4 +1,4 @@
--- Verify scoutges:tables/customers on pg
+-- Verify scoutges:tables/parties on pg
 
 SET client_min_messages TO 'warning';
 

@@ -1,10 +1,10 @@
--- Revert scoutges:tables/customers from pg
+-- Revert scoutges:tables/parties from pg
 
 SET client_min_messages TO 'warning';
 
 BEGIN;
 
-  DROP TABLE public.customers;
+  DROP TABLE public.parties;
 
 COMMIT;
 

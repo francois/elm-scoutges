@@ -7,7 +7,7 @@ BEGIN;
 
   REVOKE ALL PRIVILEGES ON public.orders FROM PUBLIC;
 
-  GRANT SELECT(name, slug, customer_slug, ship_to, bill_to, checkout_on, start_on, end_on, return_on, created_at, updated_at)
+  GRANT SELECT(name, slug, party_slug, ship_to, bill_to, checkout_on, start_on, end_on, return_on, created_at, updated_at)
     , INSERT(name, ship_to, bill_to, checkout_on, start_on, end_on, return_on)
     , UPDATE(name, ship_to, bill_to, checkout_on, start_on, end_on, return_on)
     , DELETE

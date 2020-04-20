@@ -1,4 +1,4 @@
--- Verify scoutges:acls/tables/customer_addresses on pg
+-- Verify scoutges:tables/party_addresses on pg
 
 SET client_min_messages TO 'warning';
 
