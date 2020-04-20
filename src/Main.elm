@@ -1,8 +1,8 @@
 port module Main exposing (main)
 
+import Base64
 import Browser
 import Browser.Navigation as Nav
-import Cmd.Extra
 import Debug
 import Element exposing (Color, Element, alignLeft, alignRight, alignTop, centerX, centerY, column, el, fill, height, padding, px, rgb255, row, spacing, text, width)
 import Element.Background as Background
@@ -14,6 +14,7 @@ import Html.Events
 import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
+import Time
 import Url
 import Url.Builder as Builder
 import Url.Parser as Parser
@@ -24,14 +25,21 @@ import Url.Parser as Parser
 
 
 type alias Flags =
-    { token : Maybe JwtToken }
+    { token : Maybe JwtToken
+    , now : Int
+    }
+
+
+type Data
+    = SignInData SignInForm
+    | RegistrationData RegistrationForm
 
 
 type alias Model =
     { authenticationState : AuthenticationState
     , users : Maybe (List User)
     , key : Nav.Key
-    , route : Route
+    , route : ( Route, Maybe Data )
     }
 
 
@@ -82,33 +90,132 @@ type alias SignInForm =
 
 init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
-    let
-        route =
-            case Parser.parse routeParser url of
-                Just x ->
-                    x
-
-                Nothing ->
-                    SignIn
-    in
-    case flags.token of
-        Just token ->
-            ( { authenticationState = Authenticated token
+    case Parser.parse routeParser url of
+        Just SignIn ->
+            ( { authenticationState = Anonymous
               , users = Nothing
               , key = key
-              , route = route
+              , route = ( SignIn, Just (SignInData newSignInRequest) )
               }
-            , Cmd.none
+            , manageJwtToken ( "clear", "" )
             )
+
+        Just Register ->
+            ( { authenticationState = Anonymous
+              , users = Nothing
+              , key = key
+              , route = ( Register, Just (RegistrationData newRegistrationRequest) )
+              }
+            , manageJwtToken ( "clear", "" )
+            )
+
+        Just _ ->
+            case flags.token of
+                Just token ->
+                    case parseJWT token of
+                        Ok _ ->
+                            ( { authenticationState = Authenticated token
+                              , users = Nothing
+                              , key = key
+                              , route = ( Dashboard, Nothing )
+                              }
+                            , Nav.replaceUrl key (buildUrl Dashboard)
+                            )
+
+                        Err _ ->
+                            ( { authenticationState = Anonymous
+                              , users = Nothing
+                              , key = key
+                              , route = ( SignIn, Just (SignInData newSignInRequest) )
+                              }
+                            , Cmd.batch
+                                [ manageJwtToken ( "clear", "" )
+                                , Nav.replaceUrl key (buildUrl SignIn)
+                                ]
+                            )
+
+                Nothing ->
+                    ( { authenticationState = Anonymous
+                      , users = Nothing
+                      , key = key
+                      , route = ( SignIn, Just (SignInData newSignInRequest) )
+                      }
+                    , Cmd.batch
+                        [ manageJwtToken ( "clear", "" )
+                        , Nav.replaceUrl key (buildUrl SignIn)
+                        ]
+                    )
 
         Nothing ->
             ( { authenticationState = Anonymous
               , users = Nothing
               , key = key
-              , route = route
+              , route = ( SignIn, Just (SignInData newSignInRequest) )
               }
-            , Cmd.none
+            , Cmd.batch
+                [ manageJwtToken ( "clear", "" )
+                , Nav.replaceUrl key (buildUrl SignIn)
+                ]
             )
+
+
+type JwtError
+    = FailedJWTDecode String
+
+
+type alias JwtDetails =
+    { exp : Int
+    , sub : String
+    , jti : String
+    }
+
+
+parseJWT : JwtToken -> Result JwtError JwtDetails
+parseJWT token =
+    let
+        parts =
+            String.split "." token
+
+        jsondata =
+            case parts of
+                hdr :: data :: sig ->
+                    Base64.decode data
+
+                [ _ ] ->
+                    Err "JWT syntax error"
+
+                [] ->
+                    Err "JWT syntax error"
+
+        parseddata : Result JwtError JwtDetails
+        parseddata =
+            case jsondata of
+                Ok str ->
+                    let
+                        parsed : Result Decode.Error JwtDetails
+                        parsed =
+                            Decode.decodeString jwtDecoder str
+                    in
+                    case parsed of
+                        Ok jwt ->
+                            Ok jwt
+
+                        Err (Decode.Field name cause) ->
+                            Err (FailedJWTDecode ("Failed to decode [" ++ name ++ "]"))
+
+                        Err (Decode.Index idx cause) ->
+                            Err (FailedJWTDecode ("Failed to decode at index " ++ String.fromInt idx))
+
+                        Err (Decode.OneOf causes) ->
+                            Err (FailedJWTDecode ("Failed to decode one of " ++ String.fromInt (List.length causes) ++ "variants"))
+
+                        Err (Decode.Failure error value) ->
+                            Err (FailedJWTDecode ("Failed to decode: " ++ error))
+
+                Err reason ->
+                    Err (FailedJWTDecode reason)
+    in
+    parseddata
 
 
 newSignInRequest : SignInForm
@@ -145,72 +252,78 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         FillInPassword str ->
-            -- case model.route of
-            --     FillingSignInForm req ->
-            --         let
-            --             newReq =
-            --                 { req | password = str }
-            --         in
-            --         ( { model | formState = FillingSignInForm newReq }, Cmd.none )
-            --     FillingRegistrationForm req ->
-            --         let
-            --             newReq =
-            --                 { req | password = str }
-            --         in
-            --         ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
-            ( model, Cmd.none )
+            case model.route of
+                ( SignIn, Just (SignInData req) ) ->
+                    let
+                        newReq =
+                            { req | password = str }
+                    in
+                    ( { model | route = ( SignIn, Just (SignInData newReq) ) }, Cmd.none )
+
+                ( Register, Just (RegistrationData req) ) ->
+                    let
+                        newReq =
+                            { req | password = str }
+                    in
+                    ( { model | route = ( Register, Just (RegistrationData newReq) ) }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
         FillInEmail str ->
-            --case model.formState of
-            --    FillingSignInForm req ->
-            --        let
-            --            newReq =
-            --                { req | email = str }
-            --        in
-            --        ( { model | formState = FillingSignInForm newReq }, Cmd.none )
-            --    FillingRegistrationForm req ->
-            --        let
-            --            newReq =
-            --                { req | email = str }
-            --        in
-            --        ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
-            ( model, Cmd.none )
+            case model.route of
+                ( SignIn, Just (SignInData req) ) ->
+                    let
+                        newReq =
+                            { req | email = str }
+                    in
+                    ( { model | route = ( SignIn, Just (SignInData newReq) ) }, Cmd.none )
+
+                ( Register, Just (RegistrationData req) ) ->
+                    let
+                        newReq =
+                            { req | email = str }
+                    in
+                    ( { model | route = ( Register, Just (RegistrationData newReq) ) }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
         FillInName str ->
-            -- case model.formState of
-            --     FillingRegistrationForm req ->
-            --         let
-            --             newReq =
-            --                 { req | name = str }
-            --         in
-            --         ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
-            --     _ ->
-            --         ( model, Cmd.none )
-            ( model, Cmd.none )
+            case model.route of
+                ( Register, Just (RegistrationData req) ) ->
+                    let
+                        newReq =
+                            { req | name = str }
+                    in
+                    ( { model | route = ( Register, Just (RegistrationData newReq) ) }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
         FillInPhone str ->
-            --case model.formState of
-            --    FillingRegistrationForm req ->
-            --        let
-            --            newReq =
-            --                { req | phone = str }
-            --        in
-            --        ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
-            --    _ ->
-            --        ( model, Cmd.none )
-            ( model, Cmd.none )
+            case model.route of
+                ( Register, Just (RegistrationData req) ) ->
+                    let
+                        newReq =
+                            { req | phone = str }
+                    in
+                    ( { model | route = ( Register, Just (RegistrationData newReq) ) }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
         FillInGroupName str ->
-            --case model.formState of
-            --    FillingRegistrationForm req ->
-            --        let
-            --            newReq =
-            --                { req | groupName = str }
-            --        in
-            --        ( { model | formState = FillingRegistrationForm newReq }, Cmd.none )
-            --    _ ->
-            --        ( model, Cmd.none )
-            ( model, Cmd.none )
+            case model.route of
+                ( Register, Just (RegistrationData req) ) ->
+                    let
+                        newReq =
+                            { req | groupName = str }
+                    in
+                    ( { model | route = ( Register, Just (RegistrationData newReq) ) }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
         RunSignIn req ->
             ( { model | authenticationState = InProgress }, signIn req )
@@ -219,15 +332,17 @@ update msg model =
             ( { model | authenticationState = InProgress }, register req )
 
         SignInResult (Ok resp) ->
-            { model | authenticationState = Authenticated resp.token }
-                |> Cmd.Extra.withCmds [ getAllUsers resp.token, storeJwtToken resp.token ]
+            ( { model | authenticationState = Authenticated resp.token }
+            , Cmd.batch [ getAllUsers resp.token, manageJwtToken ( "set", resp.token ), Nav.pushUrl model.key (buildUrl Dashboard) ]
+            )
 
         SignInResult (Err _) ->
             ( { model | authenticationState = Failed }, Cmd.none )
 
         RegisterResult (Ok resp) ->
-            { model | authenticationState = Authenticated resp.token }
-                |> Cmd.Extra.withCmds [ getAllUsers resp.token, storeJwtToken resp.token ]
+            ( { model | authenticationState = Authenticated resp.token }
+            , Cmd.batch [ getAllUsers resp.token, manageJwtToken ( "set", resp.token ), Nav.pushUrl model.key (buildUrl Dashboard) ]
+            )
 
         RegisterResult (Err _) ->
             ( { model | authenticationState = Failed }, Cmd.none )
@@ -250,11 +365,17 @@ update msg model =
             let
                 route =
                     case Parser.parse routeParser url of
-                        Just x ->
-                            x
+                        Just SignIn ->
+                            ( SignIn, Just (SignInData newSignInRequest) )
 
-                        Nothing ->
-                            SignIn
+                        Just Register ->
+                            ( Register, Just (RegistrationData newRegistrationRequest) )
+
+                        Just Dashboard ->
+                            ( Dashboard, Nothing )
+
+                        _ ->
+                            ( SignIn, Just (SignInData newSignInRequest) )
             in
             ( { model | route = route }
             , Cmd.none
@@ -281,7 +402,7 @@ view model =
 
         heightPx =
             case model.route of
-                Register ->
+                ( Register, _ ) ->
                     576
 
                 _ ->
@@ -302,14 +423,17 @@ view model =
                     let
                         form =
                             case model.route of
-                                Register ->
-                                    registerFormView newRegistrationRequest failed
+                                ( Register, Just (RegistrationData req) ) ->
+                                    registerFormView req failed
 
-                                SignIn ->
-                                    signInFormView newSignInRequest failed
+                                ( SignIn, Just (SignInData req) ) ->
+                                    signInFormView req failed
 
-                                _ ->
-                                    el [] (text "oops")
+                                ( Dashboard, _ ) ->
+                                    el [] (text "dashboard")
+
+                                ( _, _ ) ->
+                                    el [] (text "unhandled case")
                     in
                     column [ spacing 16, centerY, centerX, Background.color gray7, height (Element.px heightPx) ]
                         [ signInOrAuthenticateTabView model
@@ -382,7 +506,7 @@ signInOrAuthenticateTabView model =
     let
         ( bgCol1, bgCol2 ) =
             case model.route of
-                Register ->
+                ( Register, _ ) ->
                     ( gray6, gray7 )
 
                 _ ->
@@ -598,6 +722,14 @@ authenticationRequestEncoder req =
         ]
 
 
+jwtDecoder : Decode.Decoder JwtDetails
+jwtDecoder =
+    Decode.map3 JwtDetails
+        (Decode.field "exp" Decode.int)
+        (Decode.field "sub" Decode.string)
+        (Decode.field "jti" Decode.string)
+
+
 authenticationResponseDecoder : Decode.Decoder SignInResponse
 authenticationResponseDecoder =
     Decode.map SignInResponse (Decode.field "token" Decode.string)
@@ -682,6 +814,7 @@ type Route
     = SignIn
     | Register
     | Dashboard
+    | Home
 
 
 buildUrl : Route -> String
@@ -696,6 +829,9 @@ buildUrl route =
         Dashboard ->
             Builder.absolute [ "dashboard" ] []
 
+        Home ->
+            Builder.absolute [ "/" ] []
+
 
 routeParser : Parser.Parser (Route -> a) a
 routeParser =
@@ -703,6 +839,7 @@ routeParser =
         [ Parser.map SignIn (Parser.s "sign-in")
         , Parser.map Register (Parser.s "register")
         , Parser.map Dashboard (Parser.s "dashboard")
+        , Parser.map Home Parser.top
         ]
 
 
@@ -710,7 +847,7 @@ routeParser =
 ---- PORTS ----
 
 
-port storeJwtToken : String -> Cmd msg
+port manageJwtToken : ( String, String ) -> Cmd msg
 
 
 

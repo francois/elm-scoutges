@@ -27,21 +27,27 @@ function storageAvailable(type) {
 }
 
 var token = null;
-if(storageAvailable("localStorage")) {
-  token = localStorage.jwtToken;
-  if(token === undefined) {
+if (storageAvailable("localStorage")) {
+  token = localStorage.getItem("jwt-token");
+  if (token === undefined) {
     token = null;
   }
 }
 
 let app = Elm.Main.init({
   node: document.getElementById('root'),
-  flags: { token }
+  flags: { token, now: Date.now() }
 });
 
-app.ports.storeJwtToken.subscribe(function(message) {
-  if(storageAvailable("localStorage")) {
-    localStorage.jwtToken = message;
+app.ports.manageJwtToken.subscribe(function(tuple) {
+  if (storageAvailable("localStorage")) {
+    if (tuple[0] == "set") {
+      console.log("set")
+      localStorage.setItem("jwt-token", tuple[1]);
+    } else if (tuple[0] == "clear" ) {
+      console.log("clear")
+      localStorage.removeItem("jwt-token");
+    }
   }
 });
 
