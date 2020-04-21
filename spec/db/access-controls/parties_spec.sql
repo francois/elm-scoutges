@@ -13,17 +13,17 @@ BEGIN;
   RESET ROLE;
 
   SET LOCAL ROLE TO "47eme";
-    INSERT INTO public.parties(name) VALUES ('ASC47');
-    INSERT INTO public.parties(name) VALUES ('Ville de Sherbrooke');
+    INSERT INTO api.parties(name) VALUES ('ASC47');
+    INSERT INTO api.parties(name) VALUES ('Ville de Sherbrooke');
   RESET ROLE;
 
   SET LOCAL ROLE TO "10ème";
-    INSERT INTO public.parties(name) VALUES ('ASC10');
-    INSERT INTO public.parties(name) VALUES ('District de l''érable');
+    INSERT INTO api.parties(name) VALUES ('ASC10');
+    INSERT INTO api.parties(name) VALUES ('District de l''érable');
   RESET ROLE;
 
   SET LOCAL ROLE TO "10ème";
-    SELECT set_eq('SELECT name FROM parties', array['ASC10', 'District de l''érable'], 'can only see own parties');
+    SELECT set_eq('SELECT name FROM api.parties', array['ASC10', 'District de l''érable'], 'can only see own parties');
   RESET ROLE;
 
   SELECT * FROM finish();

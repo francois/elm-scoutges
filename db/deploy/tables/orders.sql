@@ -7,13 +7,13 @@ SET client_min_messages TO 'warning';
 
 BEGIN;
 
-  CREATE TABLE public.orders(
+  CREATE TABLE api.orders(
       id serial not null unique
 
     , name text not null
     , slug text not null unique default generate_serial_nos(8)
     , party_slug text not null
-        references public.parties(slug) on update cascade on delete restrict
+        references api.parties(slug) on update cascade on delete restrict
     , bill_to text not null
     , ship_to text
 
@@ -35,14 +35,14 @@ BEGIN;
     , constraint end_on_before_return_on check(end_on <= return_on)
 
     , foreign key(party_slug, bill_to)
-        references public.party_addresses(party_slug, name)
+        references api.party_addresses(party_slug, name)
         on update cascade on delete restrict
   );
 
-  COMMENT ON TABLE public.orders IS 'The record of when products/kits/consumables were checked out, and possibly returned.';
-  COMMENT ON COLUMN public.orders.unavailability_period IS 'An inclusive date range that holds all the dates in which instances on this order will be unavailable.';
-  COMMENT ON COLUMN public.orders.bill_to IS 'The address to send the invoice to, after the event is over';
-  COMMENT ON COLUMN public.orders.ship_to IS 'The address where the products are to be delivered; optional. Free form text.';
+  COMMENT ON TABLE api.orders IS 'The record of when products/kits/consumables were checked out, and possibly returned.';
+  COMMENT ON COLUMN api.orders.unavailability_period IS 'An inclusive date range that holds all the dates in which instances on this order will be unavailable.';
+  COMMENT ON COLUMN api.orders.bill_to IS 'The address to send the invoice to, after the event is over';
+  COMMENT ON COLUMN api.orders.ship_to IS 'The address where the products are to be delivered; optional. Free form text.';
 
 COMMIT;
 

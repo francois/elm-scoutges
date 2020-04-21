@@ -5,9 +5,9 @@ SET client_min_messages TO 'warning';
 
 BEGIN;
 
-  CREATE TABLE public.party_addresses(
+  CREATE TABLE api.party_addresses(
       id serial not null unique
-    , party_slug text not null references public.parties(slug) on update cascade on delete cascade
+    , party_slug text not null references api.parties(slug) on update cascade on delete cascade
     , name text not null check(length(trim(name)) > 0)
     , address text not null check(length(trim(name)) > 0)
     , created_at timestamp with time zone not null default current_timestamp

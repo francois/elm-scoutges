@@ -5,7 +5,7 @@ SET client_min_messages TO 'warning';
 
 BEGIN;
 
-  CREATE TABLE public.parties(
+  CREATE TABLE api.parties(
       id serial not null unique
     , slug text not null primary key default public.generate_serial_nos(8)
     , name text not null
@@ -18,8 +18,8 @@ BEGIN;
         references public.groups(pgrole) on update cascade on delete restrict
   );
 
-  COMMENT ON TABLE public.parties IS 'The list of all parties a group makes business with. \"parties\" here is taken in a large sense: it includes suppliers, troops and actual leasers of products of this scout group.';
-  COMMENT ON COLUMN public.parties.type IS 'Describes the relationship of ourselves towards this party; are they customers of ours, or are they one of our troops, or an external group?';
+  COMMENT ON TABLE api.parties IS 'The list of all parties a group makes business with. \"parties\" here is taken in a large sense: it includes suppliers, troops and actual leasers of products of this scout group.';
+  COMMENT ON COLUMN api.parties.type IS 'Describes the relationship of ourselves towards this party; are they customers of ours, or are they one of our troops, or an external group?';
 
 COMMIT;
 

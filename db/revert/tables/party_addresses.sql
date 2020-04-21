@@ -4,7 +4,7 @@ SET client_min_messages TO 'warning';
 
 BEGIN;
 
-  DROP TABLE public.party_addresses;
+  DROP TABLE api.party_addresses;
 
 COMMIT;
 

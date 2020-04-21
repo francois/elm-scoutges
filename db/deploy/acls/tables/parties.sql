@@ -5,21 +5,21 @@ SET client_min_messages TO 'warning';
 
 BEGIN;
 
-  REVOKE ALL PRIVILEGES ON public.parties FROM PUBLIC;
+  REVOKE ALL PRIVILEGES ON api.parties FROM PUBLIC;
 
   GRANT SELECT(slug, name, type, created_at, updated_at)
     , INSERT(name, type)
     , UPDATE(name, type)
     , DELETE
-  ON TABLE public.parties
+  ON TABLE api.parties
   TO authenticated;
 
-  GRANT USAGE ON SEQUENCE parties_id_seq TO authenticated;
+  GRANT USAGE ON SEQUENCE api.parties_id_seq TO authenticated;
 
-  ALTER TABLE public.parties ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE api.parties ENABLE ROW LEVEL SECURITY;
 
   CREATE POLICY self_crud
-  ON public.parties
+  ON api.parties
   AS PERMISSIVE
   FOR ALL
   TO authenticated

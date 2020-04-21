@@ -4,10 +4,10 @@ SET client_min_messages TO 'warning';
 
 BEGIN;
 
-  DROP POLICY self_crud ON public.party_addresses;
-  ALTER TABLE public.party_addresses ENABLE ROW LEVEL SECURITY;
-  REVOKE USAGE ON SEQUENCE party_addresses_id_seq FROM authenticated;
-  REVOKE ALL PRIVILEGES ON public.party_addresses FROM authenticated;
+  DROP POLICY self_crud ON api.party_addresses;
+  ALTER TABLE api.party_addresses ENABLE ROW LEVEL SECURITY;
+  REVOKE USAGE ON SEQUENCE api.party_addresses_id_seq FROM authenticated;
+  REVOKE ALL PRIVILEGES ON api.party_addresses FROM authenticated;
 
 COMMIT;
 
