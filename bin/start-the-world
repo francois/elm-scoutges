@@ -1,3 +1,21 @@
 #!/bin/sh
+set -o errexit -o nounset
+
+if [ ! -d db/cluster-dev ]
+then
+  initdb -k -D db/cluster-dev
+else
+  echo >&2 "The development database cluster already exists -- keeping as-is"
+fi
+
+if [ ! -d db/cluster-test ]
+then
+  echo >&2 "Initializing the test database cluster"
+  initdb -k -D db/cluster-test
+else
+  echo >&2 "The test database cluster already exists -- keeping as-is"
+fi
+
 rake deps:js spec/postgrest.conf --quiet
+
 OVERMIND_PROCESSES=nginx,elm,pgdev,postgrestdev,elmtest,pgtest,postgresttest exec overmind start -f Procfile.dev

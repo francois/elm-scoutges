@@ -20,21 +20,6 @@ else
   exit 1
 fi
 
-if [ ! -d db/cluster-dev ]
-then
-  initdb -k -D db/cluster-dev
-else
-  echo >&2 "The development database cluster already exists -- not overwriting"
-fi
-
-if [ ! -d db/cluster-test ]
-then
-  echo >&2 "Initializing the test database cluster"
-  initdb -k -D db/cluster-test
-else
-  echo >&2 "The test database cluster already exists -- not overwriting"
-fi
-
 echo >&2 ""
 echo >&2 ""
 echo >&2 "Dependencies installed! Please continue with the last steps of setup:"
