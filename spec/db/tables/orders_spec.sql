@@ -10,7 +10,7 @@ BEGIN;
   RESET ROLE;
 
   SET LOCAL ROLE TO "10th";
-    INSERT INTO api.parties(name, type) VALUES ('Chouettes', 'troop');
+    INSERT INTO api.parties(name, kind) VALUES ('Chouettes', 'troop');
 
     INSERT INTO api.party_addresses(party_slug, name, address)
     SELECT parties.slug, 'Mont-Plaisant', E'420 rue Mont-Plaisant\nSherbrooke'

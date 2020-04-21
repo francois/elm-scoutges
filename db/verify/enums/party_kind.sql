@@ -1,4 +1,4 @@
--- Verify scoutges:enums/party_type on pg
+-- Verify scoutges:enums/party_kind on pg
 
 SET client_min_messages TO 'warning';
 

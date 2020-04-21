@@ -7,9 +7,9 @@ BEGIN;
 
   REVOKE ALL PRIVILEGES ON api.parties FROM PUBLIC;
 
-  GRANT SELECT(slug, name, type, created_at, updated_at)
-    , INSERT(name, type)
-    , UPDATE(name, type)
+  GRANT SELECT(slug, name, kind, created_at, updated_at)
+    , INSERT(name, kind)
+    , UPDATE(name, kind)
     , DELETE
   ON TABLE api.parties
   TO authenticated;
