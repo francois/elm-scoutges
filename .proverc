@@ -1,7 +1,5 @@
 --failures
---jobs=9
+--quiet
+--jobs=1
 --state=save
 --recurse
---rules='seq=spec/db/revert_deploy_spec.t'
---rules='seq=spec/integration/**/*.t'
---rules='par=**'
