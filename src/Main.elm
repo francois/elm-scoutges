@@ -25,6 +25,13 @@ import Url.Parser as Parser
 ---- MODEL ----
 
 
+type Request a
+    = NotLoaded
+    | Loading
+    | Loaded a
+    | Failure Http.Error
+
+
 type alias Flags =
     { token : Maybe JwtToken
     , now : Int
@@ -38,10 +45,10 @@ type Data
 
 type alias Model =
     { authenticationState : AuthenticationState
-    , users : Maybe (List User)
+    , users : Request (List User)
     , key : Nav.Key
     , route : ( Route, Maybe Data )
-    , parties : Maybe (List Party)
+    , parties : Request (List Party)
     }
 
 
@@ -98,10 +105,10 @@ init flags url key =
 
         Just Register ->
             ( { authenticationState = Anonymous
-              , users = Nothing
+              , users = NotLoaded
               , key = key
               , route = ( Register, Just (RegistrationData newRegistrationRequest) )
-              , parties = Nothing
+              , parties = NotLoaded
               }
             , manageJwtToken ( "clear", "" )
             )
@@ -113,10 +120,10 @@ init flags url key =
                         Ok details ->
                             if flags.now < details.exp then
                                 ( { authenticationState = Authenticated token
-                                  , users = Nothing
+                                  , users = NotLoaded
                                   , key = key
                                   , route = ( Dashboard, Nothing )
-                                  , parties = Nothing
+                                  , parties = NotLoaded
                                   }
                                 , Nav.replaceUrl key (buildUrl Dashboard)
                                 )
@@ -137,10 +144,10 @@ init flags url key =
 initWithSignIn : Nav.Key -> ( Model, Cmd Msg )
 initWithSignIn key =
     ( { authenticationState = Anonymous
-      , users = Nothing
+      , users = NotLoaded
       , key = key
       , route = ( SignIn, Just (SignInData newSignInRequest) )
-      , parties = Nothing
+      , parties = NotLoaded
       }
     , Cmd.batch
         [ manageJwtToken ( "clear", "" )
@@ -195,7 +202,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         PartiesLoaded (Ok parties) ->
-            ( { model | parties = Just parties }, Cmd.none )
+            ( { model | parties = Loaded parties }, Cmd.none )
 
         PartiesLoaded (Err _) ->
             Debug.todo "failed to load parties" ( model, Cmd.none )
@@ -297,7 +304,7 @@ update msg model =
             ( { model | authenticationState = Failed }, Cmd.none )
 
         UsersLoaded (Ok users) ->
-            ( { model | users = Just users }, Cmd.none )
+            ( { model | users = Loaded users }, Cmd.none )
 
         UsersLoaded (Err _) ->
             ( model, Cmd.none )
@@ -430,44 +437,54 @@ viewDashboard model =
 viewParties : Model -> Element Msg
 viewParties model =
     let
-        parties =
+        body =
             case model.parties of
-                Just list ->
-                    List.sortBy (\party -> String.toLower party.name) list
+                Loaded list ->
+                    let
+                        parties =
+                            List.sortBy (\party -> String.toLower party.name) list
+                    in
+                    Element.table [ Border.color gray6, Border.width 1, Border.solid ]
+                        { data = parties
+                        , columns =
+                            [ { header = el [ height (px 40), Border.color gray7, Border.width 1, Border.solid, Background.color gray1, Font.color white, Font.bold, Font.size 24 ] (text "Name")
+                              , width = fill
+                              , view = \party -> text party.name
+                              }
+                            , { header = el [ height (px 40), Border.color gray7, Border.width 1, Border.solid, Background.color gray1, Font.color white, Font.bold, Font.size 24 ] (text "Kind")
+                              , width = fill
+                              , view =
+                                    \party ->
+                                        case party.kind of
+                                            Customer ->
+                                                text "Customer"
 
-                Nothing ->
-                    []
+                                            Supplier ->
+                                                text "Supplier"
+
+                                            Troop ->
+                                                text "Troop"
+
+                                            Group ->
+                                                text "Group"
+                              }
+                            ]
+                        }
+
+                Loading ->
+                    spinner
+
+                NotLoaded ->
+                    el [] (text "not loaded")
+
+                Failure _ ->
+                    el [] (text "Failed to load parties ; check logs")
     in
     column [ spacing 16, width fill ]
         [ el [ padding 8, width fill, Background.color gray7, Font.color gray2 ] (navbarView model)
         , column [ padding 8, width fill, Font.alignLeft ]
             [ el [ Font.size 32, Font.bold, Region.heading 1 ] (text "Parties")
-            , Element.table [ Border.color gray6, Border.width 1, Border.solid ]
-                { data = parties
-                , columns =
-                    [ { header = el [ height (px 40), Border.color gray7, Border.width 1, Border.solid, Background.color gray1, Font.color white, Font.bold, Font.size 24 ] (text "Name")
-                      , width = fill
-                      , view = \party -> text party.name
-                      }
-                    , { header = el [ height (px 40), Border.color gray7, Border.width 1, Border.solid, Background.color gray1, Font.color white, Font.bold, Font.size 24 ] (text "Kind")
-                      , width = fill
-                      , view =
-                            \party ->
-                                case party.kind of
-                                    Customer ->
-                                        text "Customer"
-
-                                    Supplier ->
-                                        text "Supplier"
-
-                                    Troop ->
-                                        text "Troop"
-
-                                    Group ->
-                                        text "Group"
-                      }
-                    ]
-                }
+            , body
             ]
         ]
 
@@ -489,10 +506,13 @@ authBody model =
     let
         table =
             case model.users of
-                Nothing ->
+                NotLoaded ->
                     Element.none
 
-                Just users ->
+                Loading ->
+                    spinner
+
+                Loaded users ->
                     Element.table []
                         { data = users
                         , columns =
@@ -510,6 +530,9 @@ authBody model =
                               }
                             ]
                         }
+
+                Failure _ ->
+                    el [] (text "Failed to load parties ; check logs")
     in
     column []
         [ Element.paragraph [] [ text "Please take a moment to invite your colleagues to Scoutges:" ]
