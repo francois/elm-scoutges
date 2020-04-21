@@ -1,0 +1,6 @@
+brew "nginx"
+brew "overmind"
+brew "postgresql"
+brew "postgrest"
+brew "sqitch"
+brew "yarn"

@@ -1,11 +1,61 @@
 #!/bin/sh
-echo >&2 "Installing system dependencies using Homebrew"
-brew install nginx overmind postgresql postgrest yarn
+set -o errexit -o nounset
 
-echo >&2 "Installing Elm & dependencies using yarn"
+echo >&2 "Installing app dependencies using Homebrew: PostgreSQL, Sqitch, PostgREST, yarn and nginx"
+brew bundle install
+
+echo >&2 "Installing Elm & Elm dependencies using yarn"
 yarn global add create-elm-app elm-test elm-format elm-oracle
+yarn install
+
+echo >&2 "Installing the Ruby dependencies"
+if [ -x $( which bundle ) ]
+then
+  bundle install
+else
+  echo >&2 "Oops, you appear to be missing Bundler. If you already have a Ruby install,"
+  echo >&2 "gem install bundler will get you started"
+  echo >&2 ""
+  echo >&2 "Visit https://bundler.io/ for more help"
+  exit 1
+fi
+
+if [ ! -d db/cluster-dev ]
+then
+  initdb -k -D db/cluster-dev
+else
+  echo >&2 "The development database cluster already exists -- not overwriting"
+fi
+
+if [ ! -d db/cluster-test ]
+then
+  echo >&2 "Initializing the test database cluster"
+  initdb -k -D db/cluster-test
+else
+  echo >&2 "The test database cluster already exists -- not overwriting"
+fi
 
 echo >&2 ""
 echo >&2 ""
-echo >&2 "All done! You can start the development server by running: bin/start-the-world"
-echo >&2 "Visit http://localhost:3000/ to start playing with the app"
+echo >&2 "Dependencies installed! Please continue with the last steps of setup:"
+echo >&2 ""
+echo >&2 "  1. In a separate terminal, run:"
+echo >&2 ""
+echo >&2 "        bin/start-the-world"
+echo >&2 ""
+echo >&2 "     This will boot all servers: PG, nginx, etc."
+echo >&2 ""
+echo >&2 "  2. In this terminal, run:"
+echo >&2 ""
+echo >&2 "        bundle exec rake db:bootstrap:test spec"
+echo >&2 ""
+echo >&2 "      This will prepare your test database and run specs, to ensure that everything is correctly setup"
+echo >&2 ""
+echo >&2 "  3. Final step, run:"
+echo >&2 ""
+echo >&2 "        bundle exec rake db:bootstrap:development jwt:secret:rotate"
+echo >&2 ""
+echo >&2 "      This finalizes setup of the development environment"
+echo >&2 ""
+echo >&2 "  4. Visit http://localhost:3000/ to start playing with the app"
+echo >&2 "      Start by registering, then explore!"
