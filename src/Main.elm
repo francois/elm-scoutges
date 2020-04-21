@@ -4,7 +4,7 @@ import Base64
 import Browser
 import Browser.Navigation as Nav
 import Debug
-import Element exposing (Color, Element, alignLeft, alignRight, alignTop, centerX, centerY, column, el, fill, height, padding, px, rgb255, row, spacing, text, width)
+import Element exposing (Color, Element, alignLeft, alignRight, alignTop, centerX, centerY, column, el, fill, height, link, padding, px, rgb255, row, spacing, text, width)
 import Element.Background as Background
 import Element.Font as Font
 import Element.Input as Input
@@ -311,6 +311,9 @@ update msg model =
                         Just Dashboard ->
                             ( Dashboard, Nothing )
 
+                        Just Parties ->
+                            ( Parties, Nothing )
+
                         _ ->
                             ( SignIn, Just (SignInData newSignInRequest) )
             in
@@ -329,61 +332,76 @@ update msg model =
 view : Model -> Browser.Document Msg
 view model =
     let
-        failed =
-            case model.authenticationState of
-                Failed ->
-                    True
-
-                _ ->
-                    False
-
-        heightPx =
-            case model.route of
-                ( Register, _ ) ->
-                    576
-
-                _ ->
-                    352
-
         body =
-            case model.authenticationState of
-                InProgress ->
-                    column [ centerY, centerX, Background.color gray7, height (fill |> Element.minimum 352 |> Element.maximum 352) ]
-                        [ signInOrAuthenticateTabView model
-                        , el [ height fill, width (fill |> Element.minimum 400 |> Element.maximum 480) ] spinner
-                        ]
+            case model.route of
+                ( SignIn, Just (SignInData req) ) ->
+                    viewSignIn model req
 
-                Authenticated _ ->
-                    authenticatedView model
+                ( Register, Just (RegistrationData req) ) ->
+                    viewRegister model req
+
+                ( Dashboard, _ ) ->
+                    viewDashboard model
+
+                ( Parties, _ ) ->
+                    viewParties model
 
                 _ ->
-                    let
-                        form =
-                            case model.route of
-                                ( Register, Just (RegistrationData req) ) ->
-                                    registerFormView req failed
-
-                                ( SignIn, Just (SignInData req) ) ->
-                                    signInFormView req failed
-
-                                ( Dashboard, _ ) ->
-                                    el [] (text "dashboard")
-
-                                ( _, _ ) ->
-                                    el [] (text "unhandled case")
-                    in
-                    column [ spacing 16, centerY, centerX, Background.color gray7, height (Element.px heightPx) ]
-                        [ signInOrAuthenticateTabView model
-                        , el [ width (fill |> Element.minimum 400 |> Element.maximum 480) ] form
-                        ]
+                    el [] (text "fallthrough")
     in
     { title = "URL Interceptor"
     , body = [ Element.layout [ Font.color gray1, Background.color white, centerX ] body ]
     }
 
 
-authenticatedView : Model -> Element Msg
-authenticatedView model =
+viewSignIn : Model -> SignInForm -> Element Msg
+viewSignIn model req =
+    let
+        body =
+            case model.authenticationState of
+                InProgress ->
+                    el [ height fill, width (fill |> Element.minimum 400 |> Element.maximum 480) ] spinner
+
+                Failed ->
+                    signInFormView req True
+
+                Anonymous ->
+                    signInFormView req False
+
+                Authenticated _ ->
+                    el [] (text "should not happen, so I have a modelling error")
+    in
+    column [ centerY, centerX, Background.color gray7, width (px 400), height (px 352) ]
+        [ signInOrAuthenticateTabView model
+        , body
+        ]
+
+
+viewRegister : Model -> RegistrationForm -> Element Msg
+viewRegister model req =
+    let
+        body =
+            case model.authenticationState of
+                InProgress ->
+                    el [ height fill, width (fill |> Element.minimum 400 |> Element.maximum 480) ] spinner
+
+                Failed ->
+                    registerFormView req True
+
+                Anonymous ->
+                    registerFormView req False
+
+                Authenticated _ ->
+                    el [] (text "should not happen, so I have a modelling error")
+    in
+    column [ centerY, centerX, Background.color gray7, width (px 400), height (px 576) ]
+        [ signInOrAuthenticateTabView model
+        , body
+        ]
+
+
+viewDashboard : Model -> Element Msg
+viewDashboard model =
     column [ spacing 16, width fill ]
         [ el [ padding 8, width fill, Background.color gray7, Font.color gray2 ] (navbarView model)
         , column [ padding 8, width fill, Font.alignLeft ]
@@ -393,12 +411,22 @@ authenticatedView model =
         ]
 
 
+viewParties : Model -> Element Msg
+viewParties model =
+    column [ spacing 16, width fill ]
+        [ el [ padding 8, width fill, Background.color gray7, Font.color gray2 ] (navbarView model)
+        , column [ padding 8, width fill, Font.alignLeft ]
+            [ el [ Font.size 32, Font.bold, Region.heading 1 ] (text "Parties")
+            ]
+        ]
+
+
 navbarView : Model -> Element Msg
 navbarView _ =
     row [ Element.alignTop, width fill, Region.navigation ]
         [ row [ width fill, spacing 8 ]
-            [ el [ padding 8, Element.alignLeft ] (text "Scoutges")
-            , el [ padding 8, Element.alignLeft ] (text "Dashboard")
+            [ el [ padding 8, Element.alignLeft ] (link [] { label = el [] (text "Scoutges"), url = buildUrl Home })
+            , el [ padding 8, Element.alignLeft ] (link [] { label = el [] (text "Parties"), url = buildUrl Parties })
             , el [ padding 8, Element.alignLeft ] (text "Users")
             ]
         , el [ padding 8, Element.alignRight ] (text "Account")
@@ -651,6 +679,52 @@ onEnter msg =
 ---- JSON Encoders & Decoders ----
 
 
+type PartyKind
+    = Customer
+    | Troop
+    | Group
+    | Supplier
+
+
+type alias PartySlug =
+    String
+
+
+type alias Party =
+    { slug : PartySlug
+    , name : String
+    , kind : PartyKind
+    }
+
+
+partyDecoder : Decode.Decoder Party
+partyDecoder =
+    Decode.map3 Party
+        (Decode.field "slug" Decode.string)
+        (Decode.field "name" Decode.string)
+        (Decode.field "kind" partyKindDecoder)
+
+
+partyKindDecoder : Decode.Decoder PartyKind
+partyKindDecoder =
+    Decode.map
+        (\str ->
+            case str of
+                "troop" ->
+                    Troop
+
+                "group" ->
+                    Group
+
+                "supplier" ->
+                    Supplier
+
+                _ ->
+                    Customer
+        )
+        Decode.string
+
+
 authenticationRequestEncoder : SignInForm -> Encode.Value
 authenticationRequestEncoder req =
     Encode.object
@@ -804,6 +878,7 @@ type Route
     | Register
     | Dashboard
     | Home
+    | Parties
 
 
 buildUrl : Route -> String
@@ -818,8 +893,11 @@ buildUrl route =
         Dashboard ->
             Builder.absolute [ "dashboard" ] []
 
+        Parties ->
+            Builder.absolute [ "parties" ] []
+
         Home ->
-            Builder.absolute [ "/" ] []
+            Builder.absolute [ "" ] []
 
 
 routeParser : Parser.Parser (Route -> a) a
@@ -828,6 +906,7 @@ routeParser =
         [ Parser.map SignIn (Parser.s "sign-in")
         , Parser.map Register (Parser.s "register")
         , Parser.map Dashboard (Parser.s "dashboard")
+        , Parser.map Parties (Parser.s "parties")
         , Parser.map Home Parser.top
         ]
 
