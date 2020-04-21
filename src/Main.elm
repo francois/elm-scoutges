@@ -4,18 +4,16 @@ import Base64
 import Browser
 import Browser.Navigation as Nav
 import Debug
-import Element exposing (Color, Element, alignLeft, alignRight, alignTop, centerX, centerY, column, el, fill, height, link, padding, px, rgb255, row, spacing, text, width)
+import Element exposing (Color, Element, centerX, centerY, column, el, fill, height, link, padding, px, rgb255, row, spacing, text, width)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
-import Html
 import Html.Events
 import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
-import Time
 import Url
 import Url.Builder as Builder
 import Url.Parser as Parser
@@ -204,8 +202,8 @@ update msg model =
         PartiesLoaded (Ok parties) ->
             ( { model | parties = Loaded parties }, Cmd.none )
 
-        PartiesLoaded (Err _) ->
-            Debug.todo "failed to load parties" ( model, Cmd.none )
+        PartiesLoaded (Err err) ->
+            ( { model | parties = Failure err }, Cmd.none )
 
         FillInPassword str ->
             case model.route of
@@ -288,26 +286,26 @@ update msg model =
             ( { model | authenticationState = InProgress }, register req )
 
         SignInResult (Ok resp) ->
-            ( { model | authenticationState = Authenticated resp.token }
+            ( { model | authenticationState = Authenticated resp.token, users = Loading }
             , Cmd.batch [ getAllUsers resp.token, manageJwtToken ( "set", resp.token ), Nav.pushUrl model.key (buildUrl Dashboard) ]
             )
 
         SignInResult (Err _) ->
-            ( { model | authenticationState = Failed }, Cmd.none )
+            ( { model | authenticationState = Failed, users = NotLoaded }, Cmd.none )
 
         RegisterResult (Ok resp) ->
-            ( { model | authenticationState = Authenticated resp.token }
+            ( { model | authenticationState = Authenticated resp.token, users = Loading }
             , Cmd.batch [ getAllUsers resp.token, manageJwtToken ( "set", resp.token ), Nav.pushUrl model.key (buildUrl Dashboard) ]
             )
 
         RegisterResult (Err _) ->
-            ( { model | authenticationState = Failed }, Cmd.none )
+            ( { model | authenticationState = Failed, users = NotLoaded }, Cmd.none )
 
         UsersLoaded (Ok users) ->
             ( { model | users = Loaded users }, Cmd.none )
 
-        UsersLoaded (Err _) ->
-            ( model, Cmd.none )
+        UsersLoaded (Err err) ->
+            ( { model | users = Failure err }, Cmd.none )
 
         LinkClicked urlRequest ->
             case urlRequest of
@@ -328,7 +326,7 @@ update msg model =
                 Just Dashboard ->
                     case model.authenticationState of
                         Authenticated token ->
-                            ( { model | route = ( Dashboard, Nothing ) }, getAllUsers token )
+                            ( { model | route = ( Dashboard, Nothing ), users = Loading }, getAllUsers token )
 
                         _ ->
                             ( model, Cmd.none )
@@ -336,7 +334,7 @@ update msg model =
                 Just Parties ->
                     case model.authenticationState of
                         Authenticated token ->
-                            ( { model | route = ( Parties, Nothing ) }, getAllParties token )
+                            ( { model | route = ( Parties, Nothing ), parties = Loading }, getAllParties token )
 
                         _ ->
                             ( model, Cmd.none )
