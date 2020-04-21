@@ -6,6 +6,7 @@ import Browser.Navigation as Nav
 import Debug
 import Element exposing (Color, Element, alignLeft, alignRight, alignTop, centerX, centerY, column, el, fill, height, link, padding, px, rgb255, row, spacing, text, width)
 import Element.Background as Background
+import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
@@ -40,6 +41,7 @@ type alias Model =
     , users : Maybe (List User)
     , key : Nav.Key
     , route : ( Route, Maybe Data )
+    , parties : Maybe (List Party)
     }
 
 
@@ -99,6 +101,7 @@ init flags url key =
               , users = Nothing
               , key = key
               , route = ( Register, Just (RegistrationData newRegistrationRequest) )
+              , parties = Nothing
               }
             , manageJwtToken ( "clear", "" )
             )
@@ -113,6 +116,7 @@ init flags url key =
                                   , users = Nothing
                                   , key = key
                                   , route = ( Dashboard, Nothing )
+                                  , parties = Nothing
                                   }
                                 , Nav.replaceUrl key (buildUrl Dashboard)
                                 )
@@ -136,6 +140,7 @@ initWithSignIn key =
       , users = Nothing
       , key = key
       , route = ( SignIn, Just (SignInData newSignInRequest) )
+      , parties = Nothing
       }
     , Cmd.batch
         [ manageJwtToken ( "clear", "" )
@@ -183,11 +188,18 @@ type Msg
     | LinkClicked Browser.UrlRequest
     | UrlChanged Url.Url
     | Go Route
+    | PartiesLoaded (Result Http.Error (List Party))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        PartiesLoaded (Ok parties) ->
+            ( { model | parties = Just parties }, Cmd.none )
+
+        PartiesLoaded (Err _) ->
+            Debug.todo "failed to load parties" ( model, Cmd.none )
+
         FillInPassword str ->
             case model.route of
                 ( SignIn, Just (SignInData req) ) ->
@@ -299,27 +311,31 @@ update msg model =
                     ( model, Nav.load href )
 
         UrlChanged url ->
-            let
-                route =
-                    case Parser.parse routeParser url of
-                        Just SignIn ->
-                            ( SignIn, Just (SignInData newSignInRequest) )
+            case Parser.parse routeParser url of
+                Just SignIn ->
+                    ( { model | route = ( SignIn, Just (SignInData newSignInRequest) ) }, Cmd.none )
 
-                        Just Register ->
-                            ( Register, Just (RegistrationData newRegistrationRequest) )
+                Just Register ->
+                    ( { model | route = ( Register, Just (RegistrationData newRegistrationRequest) ) }, Cmd.none )
 
-                        Just Dashboard ->
-                            ( Dashboard, Nothing )
-
-                        Just Parties ->
-                            ( Parties, Nothing )
+                Just Dashboard ->
+                    case model.authenticationState of
+                        Authenticated token ->
+                            ( { model | route = ( Dashboard, Nothing ) }, getAllUsers token )
 
                         _ ->
-                            ( SignIn, Just (SignInData newSignInRequest) )
-            in
-            ( { model | route = route }
-            , Cmd.none
-            )
+                            ( model, Cmd.none )
+
+                Just Parties ->
+                    case model.authenticationState of
+                        Authenticated token ->
+                            ( { model | route = ( Parties, Nothing ) }, getAllParties token )
+
+                        _ ->
+                            ( model, Cmd.none )
+
+                _ ->
+                    ( { model | route = ( SignIn, Just (SignInData newSignInRequest) ) }, Cmd.none )
 
         Go route ->
             ( model, Nav.pushUrl model.key (buildUrl route) )
@@ -413,10 +429,45 @@ viewDashboard model =
 
 viewParties : Model -> Element Msg
 viewParties model =
+    let
+        parties =
+            case model.parties of
+                Just list ->
+                    List.sortBy (\party -> String.toLower party.name) list
+
+                Nothing ->
+                    []
+    in
     column [ spacing 16, width fill ]
         [ el [ padding 8, width fill, Background.color gray7, Font.color gray2 ] (navbarView model)
         , column [ padding 8, width fill, Font.alignLeft ]
             [ el [ Font.size 32, Font.bold, Region.heading 1 ] (text "Parties")
+            , Element.table [ Border.color gray6, Border.width 1, Border.solid ]
+                { data = parties
+                , columns =
+                    [ { header = el [ height (px 40), Border.color gray7, Border.width 1, Border.solid, Background.color gray1, Font.color white, Font.bold, Font.size 24 ] (text "Name")
+                      , width = fill
+                      , view = \party -> text party.name
+                      }
+                    , { header = el [ height (px 40), Border.color gray7, Border.width 1, Border.solid, Background.color gray1, Font.color white, Font.bold, Font.size 24 ] (text "Kind")
+                      , width = fill
+                      , view =
+                            \party ->
+                                case party.kind of
+                                    Customer ->
+                                        text "Customer"
+
+                                    Supplier ->
+                                        text "Supplier"
+
+                                    Troop ->
+                                        text "Troop"
+
+                                    Group ->
+                                        text "Group"
+                      }
+                    ]
+                }
             ]
         ]
 
@@ -697,6 +748,11 @@ type alias Party =
     }
 
 
+partiesListDecoder : Decode.Decoder (List Party)
+partiesListDecoder =
+    Decode.list partyDecoder
+
+
 partyDecoder : Decode.Decoder Party
 partyDecoder =
     Decode.map3 Party
@@ -859,6 +915,19 @@ getAllUsers token =
         , url = "/api/users"
         , body = Http.emptyBody
         , expect = Http.expectJson UsersLoaded userListDecoder
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
+getAllParties : JwtToken -> Cmd Msg
+getAllParties token =
+    Http.request
+        { method = "GET"
+        , headers = [ Http.header "Authorization" ("Bearer " ++ token), Http.header "Accept" "application/json" ]
+        , url = "/api/parties?select=slug,name,kind"
+        , body = Http.emptyBody
+        , expect = Http.expectJson PartiesLoaded partiesListDecoder
         , timeout = Nothing
         , tracker = Nothing
         }
