@@ -1,8 +1,10 @@
 port module Main exposing (main)
 
+import Authenticate
 import Base64
 import Browser
 import Browser.Navigation as Nav
+import Colors exposing (..)
 import Debug
 import Element exposing (Color, Element, centerX, centerY, column, el, fill, height, link, padding, px, rgb255, row, spacing, text, width)
 import Element.Background as Background
@@ -47,6 +49,7 @@ type alias Model =
     , key : Nav.Key
     , route : ( Route, Maybe Data )
     , parties : Request (List Party)
+    , auth : Authenticate.Model
     }
 
 
@@ -106,6 +109,7 @@ init flags url key =
               , key = key
               , route = ( Register, Just (RegistrationData newRegistrationRequest) )
               , parties = NotLoaded
+              , auth = Authenticate.init
               }
             , manageJwtToken ( "clear", "" )
             )
@@ -121,6 +125,7 @@ init flags url key =
                                   , key = key
                                   , route = ( Dashboard, Nothing )
                                   , parties = NotLoaded
+                                  , auth = Authenticate.init
                                   }
                                 , Nav.replaceUrl key (buildUrl Dashboard)
                                 )
@@ -145,6 +150,7 @@ initWithSignIn key =
       , key = key
       , route = ( SignIn, Just (SignInData newSignInRequest) )
       , parties = NotLoaded
+      , auth = Authenticate.init
       }
     , Cmd.batch
         [ manageJwtToken ( "clear", "" )
@@ -179,20 +185,14 @@ newRegistrationRequest =
 
 
 type Msg
-    = FillInEmail String
-    | FillInPassword String
-    | FillInName String
-    | FillInGroupName String
-    | FillInPhone String
-    | RunSignIn SignInForm
-    | RunRegister RegistrationForm
-    | SignInResult (Result Http.Error SignInResponse)
+    = SignInResult (Result Http.Error SignInResponse)
     | RegisterResult (Result Http.Error RegistrationResponse)
     | UsersLoaded (Result Http.Error (List User))
     | LinkClicked Browser.UrlRequest
     | UrlChanged Url.Url
     | Go Route
     | PartiesLoaded (Result Http.Error (List Party))
+    | Auth Authenticate.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -203,86 +203,6 @@ update msg model =
 
         PartiesLoaded (Err err) ->
             ( { model | parties = Failure err }, Cmd.none )
-
-        FillInPassword str ->
-            case model.route of
-                ( SignIn, Just (SignInData req) ) ->
-                    let
-                        newReq =
-                            { req | password = str }
-                    in
-                    ( { model | route = ( SignIn, Just (SignInData newReq) ) }, Cmd.none )
-
-                ( Register, Just (RegistrationData req) ) ->
-                    let
-                        newReq =
-                            { req | password = str }
-                    in
-                    ( { model | route = ( Register, Just (RegistrationData newReq) ) }, Cmd.none )
-
-                _ ->
-                    ( model, Cmd.none )
-
-        FillInEmail str ->
-            case model.route of
-                ( SignIn, Just (SignInData req) ) ->
-                    let
-                        newReq =
-                            { req | email = str }
-                    in
-                    ( { model | route = ( SignIn, Just (SignInData newReq) ) }, Cmd.none )
-
-                ( Register, Just (RegistrationData req) ) ->
-                    let
-                        newReq =
-                            { req | email = str }
-                    in
-                    ( { model | route = ( Register, Just (RegistrationData newReq) ) }, Cmd.none )
-
-                _ ->
-                    ( model, Cmd.none )
-
-        FillInName str ->
-            case model.route of
-                ( Register, Just (RegistrationData req) ) ->
-                    let
-                        newReq =
-                            { req | name = str }
-                    in
-                    ( { model | route = ( Register, Just (RegistrationData newReq) ) }, Cmd.none )
-
-                _ ->
-                    ( model, Cmd.none )
-
-        FillInPhone str ->
-            case model.route of
-                ( Register, Just (RegistrationData req) ) ->
-                    let
-                        newReq =
-                            { req | phone = str }
-                    in
-                    ( { model | route = ( Register, Just (RegistrationData newReq) ) }, Cmd.none )
-
-                _ ->
-                    ( model, Cmd.none )
-
-        FillInGroupName str ->
-            case model.route of
-                ( Register, Just (RegistrationData req) ) ->
-                    let
-                        newReq =
-                            { req | groupName = str }
-                    in
-                    ( { model | route = ( Register, Just (RegistrationData newReq) ) }, Cmd.none )
-
-                _ ->
-                    ( model, Cmd.none )
-
-        RunSignIn req ->
-            ( { model | authenticationState = InProgress }, signIn req )
-
-        RunRegister req ->
-            ( { model | authenticationState = InProgress }, register req )
 
         SignInResult (Ok resp) ->
             ( { model | authenticationState = Authenticated resp.token, users = Loading }
@@ -344,6 +264,13 @@ update msg model =
         Go route ->
             ( model, Nav.pushUrl model.key (buildUrl route) )
 
+        Auth m ->
+            let
+                ( newmodel, cmds ) =
+                    Authenticate.update m model.auth
+            in
+            ( { model | auth = newmodel }, cmds )
+
 
 
 ---- VIEW ----
@@ -355,10 +282,12 @@ view model =
         body =
             case model.route of
                 ( SignIn, Just (SignInData req) ) ->
-                    viewSignIn model req
+                    Authenticate.view model.auth
+                        |> Element.map Auth
 
                 ( Register, Just (RegistrationData req) ) ->
-                    viewRegister model req
+                    Authenticate.view model.auth
+                        |> Element.map Auth
 
                 ( Dashboard, _ ) ->
                     viewDashboard model
@@ -372,52 +301,6 @@ view model =
     { title = "URL Interceptor"
     , body = [ Element.layout [ Font.color gray1, Background.color white, centerX ] body ]
     }
-
-
-viewSignIn : Model -> SignInForm -> Element Msg
-viewSignIn model req =
-    let
-        body =
-            case model.authenticationState of
-                InProgress ->
-                    el [ height fill, width (fill |> Element.minimum 400 |> Element.maximum 480) ] spinner
-
-                Failed ->
-                    signInFormView req True
-
-                Anonymous ->
-                    signInFormView req False
-
-                Authenticated _ ->
-                    el [] (text "should not happen, so I have a modelling error")
-    in
-    column [ centerY, centerX, Background.color gray7, width (px 400), height (px 352) ]
-        [ signInOrAuthenticateTabView model
-        , body
-        ]
-
-
-viewRegister : Model -> RegistrationForm -> Element Msg
-viewRegister model req =
-    let
-        body =
-            case model.authenticationState of
-                InProgress ->
-                    el [ height fill, width (fill |> Element.minimum 400 |> Element.maximum 480) ] spinner
-
-                Failed ->
-                    registerFormView req True
-
-                Anonymous ->
-                    registerFormView req False
-
-                Authenticated _ ->
-                    el [] (text "should not happen, so I have a modelling error")
-    in
-    column [ centerY, centerX, Background.color gray7, width (px 400), height (px 576) ]
-        [ signInOrAuthenticateTabView model
-        , body
-        ]
 
 
 viewDashboard : Model -> Element Msg
@@ -535,215 +418,6 @@ authBody model =
         [ Element.paragraph [] [ text "Please take a moment to invite your colleagues to Scoutges:" ]
         , table
         ]
-
-
-signInOrAuthenticateTabView : Model -> Element Msg
-signInOrAuthenticateTabView model =
-    let
-        ( bgCol1, bgCol2 ) =
-            case model.route of
-                ( Register, _ ) ->
-                    ( gray6, gray7 )
-
-                _ ->
-                    ( gray7, gray6 )
-    in
-    row [ width fill, Region.heading 1, Font.size 32, Background.color gray6 ]
-        [ el [ padding 8, width (Element.fillPortion 1), Background.color bgCol1 ]
-            (Input.button [ centerX, width fill, height fill ]
-                { onPress = Just (Go SignIn)
-                , label = text "Sign In"
-                }
-            )
-        , el [ padding 8, width (Element.fillPortion 1), Background.color bgCol2 ]
-            (Input.button [ centerX, width fill, height fill ]
-                { onPress = Just (Go Register)
-                , label = text "Register"
-                }
-            )
-        ]
-
-
-spinner : Element Msg
-spinner =
-    Element.image [ width (px 64), centerX, centerY ]
-        { src = "/images/spinner.gif"
-        , description = ""
-        }
-
-
-registerFormView : RegistrationForm -> Bool -> Element Msg
-registerFormView req failed =
-    column [ padding 8, spacing 8, width fill ]
-        [ Input.text [ onEnter (RunRegister req) ]
-            { onChange = FillInGroupName
-            , text = req.groupName
-            , placeholder = Nothing
-            , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Group Name")
-            }
-        , Input.text [ onEnter (RunRegister req) ]
-            { onChange = FillInName
-            , text = req.name
-            , placeholder = Nothing
-            , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Name")
-            }
-        , Input.text [ onEnter (RunRegister req) ]
-            { onChange = FillInPhone
-            , text = req.phone
-            , placeholder = Nothing
-            , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Phone")
-            }
-        , Input.email [ onEnter (RunRegister req) ]
-            { onChange = FillInEmail
-            , text = req.email
-            , placeholder = Nothing
-            , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Email")
-            }
-        , Input.newPassword [ onEnter (RunRegister req) ]
-            { onChange = FillInPassword
-            , show = False
-            , text = req.password
-            , placeholder = Nothing
-            , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Password")
-            }
-        , if failed then
-            el [ centerX, Font.color (rgb255 255 0 0) ] (text "Invalid username or password")
-
-          else
-            el [] (text "")
-        , el [ Element.paddingXY 0 16, width fill ]
-            (Input.button [ centerX ]
-                { label =
-                    el
-                        [ Background.color callToActionBackgroundColor
-                        , Font.color callToActionTextColor
-                        , padding 16
-                        , width (fill |> Element.minimum 240 |> Element.maximum 240)
-                        ]
-                        (text "Register Now")
-                , onPress = Just (RunRegister req)
-                }
-            )
-        ]
-
-
-signInFormView : SignInForm -> Bool -> Element Msg
-signInFormView req failed =
-    column [ padding 8, spacing 8, width fill ]
-        [ Input.email [ onEnter (RunSignIn req) ]
-            { onChange = FillInEmail
-            , text = req.email
-            , placeholder = Nothing
-            , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Email")
-            }
-        , Input.currentPassword [ onEnter (RunSignIn req) ]
-            { onChange = FillInPassword
-            , show = False
-            , text = req.password
-            , placeholder = Nothing
-            , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Password")
-            }
-        , if failed then
-            el [ centerX, Font.color (rgb255 255 0 0) ] (text "Invalid username or password")
-
-          else
-            el [] (text "")
-        , el [ Element.paddingXY 0 16, width fill ]
-            (Input.button [ centerX ]
-                { label =
-                    el
-                        [ Background.color callToActionBackgroundColor
-                        , Font.color callToActionTextColor
-                        , padding 16
-                        , width (fill |> Element.minimum 240 |> Element.maximum 240)
-                        ]
-                        (text "Sign In Now")
-                , onPress = Just (RunSignIn req)
-                }
-            )
-        ]
-
-
-callToActionTextColor : Color
-callToActionTextColor =
-    white
-
-
-callToActionBackgroundColor : Color
-callToActionBackgroundColor =
-    rgb255 32 32 240
-
-
-black : Color
-black =
-    rgb255 0 0 0
-
-
-gray0 : Color
-gray0 =
-    black
-
-
-gray1 : Color
-gray1 =
-    rgb255 32 32 32
-
-
-gray2 : Color
-gray2 =
-    rgb255 64 64 64
-
-
-gray3 : Color
-gray3 =
-    rgb255 96 96 96
-
-
-gray4 : Color
-gray4 =
-    rgb255 128 128 128
-
-
-gray5 : Color
-gray5 =
-    rgb255 160 160 160
-
-
-gray6 : Color
-gray6 =
-    rgb255 192 192 192
-
-
-gray7 : Color
-gray7 =
-    rgb255 224 224 224
-
-
-gray8 : Color
-gray8 =
-    white
-
-
-white : Color
-white =
-    rgb255 255 255 255
-
-
-onEnter : msg -> Element.Attribute msg
-onEnter msg =
-    Element.htmlAttribute
-        (Html.Events.on "keyup"
-            (Decode.field "key" Decode.string
-                |> Decode.andThen
-                    (\key ->
-                        if key == "Enter" then
-                            Decode.succeed msg
-
-                        else
-                            Decode.fail "Not the enter key"
-                    )
-            )
-        )
 
 
 
