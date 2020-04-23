@@ -29,7 +29,7 @@ BEGIN;
     SELECT jwt_sign(row_to_json(r), current_setting('jwt.secret')) AS token
     FROM (
         SELECT
-            'authenticated' AS role
+            pgrole AS role
           , email AS sub
           , extract(epoch from current_timestamp + interval '1 hour')::integer AS exp
           , extract(epoch from current_timestamp)::integer AS iat

@@ -20,7 +20,7 @@ BEGIN;
   GRANT
       SELECT(pgrole, name, slug, registered_at)
   ON TABLE public.groups
-  TO anonymous;
+  TO privileged;
 
 COMMIT;
 
