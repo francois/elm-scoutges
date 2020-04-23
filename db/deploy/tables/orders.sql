@@ -27,7 +27,7 @@ BEGIN;
     , updated_at timestamp with time zone not null default current_timestamp
 
     , pgrole text not null default current_user
-        references public.groups(pgrole)
+        references api.groups(pgrole)
         on update cascade on delete restrict
 
     , constraint checkout_on_before_start_on check(checkout_on <= start_on)

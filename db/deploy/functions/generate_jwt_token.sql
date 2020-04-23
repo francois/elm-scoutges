@@ -10,9 +10,11 @@ BEGIN;
     INSERT INTO public.active_jwt_tokens(email)
     VALUES (generate_jwt_token.email)
     RETURNING jid::text;
-  $$ LANGUAGE sql;
+  $$ LANGUAGE sql SECURITY DEFINER;
 
-  GRANT EXECUTE ON FUNCTION public.generate_jwt_token(text) TO anonymous;
+  REVOKE ALL PRIVILEGES ON FUNCTION public.generate_jwt_token(text) FROM PUBLIC;
+  ALTER FUNCTION public.generate_jwt_token(text) OWNER TO privileged;
+  GRANT EXECUTE ON FUNCTION public.generate_jwt_token(text) TO anonymous, authenticated;
 
 COMMIT;
 

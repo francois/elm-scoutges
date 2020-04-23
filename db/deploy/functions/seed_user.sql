@@ -10,7 +10,7 @@ BEGIN;
   DECLARE
     group_exists boolean;
   BEGIN
-    INSERT INTO public.users(email, password, name, phone, group_name, pgrole)
+    INSERT INTO api.users(email, password, name, phone, group_name, pgrole)
     VALUES(seed_user.email, seed_user.password, seed_user.name, seed_user.phone, seed_user.group_name, seed_user.group_name);
 
     RETURN;

@@ -4,7 +4,7 @@ SET client_min_messages TO 'warning';
 
 BEGIN;
 
-  DROP TRIGGER canonicalize_user_email ON public.users;
+  DROP TRIGGER canonicalize_user_email ON api.users;
 
 COMMIT;
 

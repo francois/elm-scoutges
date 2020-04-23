@@ -15,11 +15,10 @@ BEGIN;
     SELECT public.create_group_role(group_name) INTO pgrole;
 
     EXECUTE 'SET LOCAL ROLE TO ' || quote_ident(pgrole);
-      INSERT INTO public.groups(name, slug)
-      VALUES (group_name, public.slugify(group_name))
-      ON CONFLICT DO NOTHING;
+      INSERT INTO api.groups(name, slug)
+      VALUES (register.group_name, public.slugify(register.group_name));
 
-      INSERT INTO public.users(email, password, name, phone, group_name)
+      INSERT INTO api.users(email, password, name, phone, group_name)
       VALUES(register.email, register.password, register.name, register.phone, register.group_name);
     RESET ROLE;
 

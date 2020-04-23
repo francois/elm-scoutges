@@ -13,8 +13,8 @@ BEGIN;
 
   CREATE OR REPLACE FUNCTION public.identify_user(email text) RETURNS identity_result AS $$
     SELECT users.email, users.password, groups.pgrole
-    FROM public.users
-    JOIN public.groups ON groups.name = users.group_name
+    FROM api.users
+    JOIN api.groups ON groups.name = users.group_name
     WHERE users.email = identify_user.email;
   $$ LANGUAGE sql SECURITY DEFINER;
 

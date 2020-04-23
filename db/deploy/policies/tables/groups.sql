@@ -6,10 +6,10 @@ SET client_min_messages TO 'warning';
 
 BEGIN;
 
-  ALTER TABLE public.groups ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE api.groups ENABLE ROW LEVEL SECURITY;
 
   CREATE POLICY self_crud
-  ON public.groups
+  ON api.groups
   AS PERMISSIVE
   FOR ALL
   TO authenticated
@@ -17,16 +17,16 @@ BEGIN;
     groups.pgrole = current_user
   );
 
-  COMMENT ON POLICY self_crud ON public.groups IS 'Any member of a group can CRUD all members of the group. This is due to the high degree of trust within scouting groups.';
+  COMMENT ON POLICY self_crud ON api.groups IS 'Any member of a group can CRUD all members of the group. This is due to the high degree of trust within scouting groups.';
 
-  CREATE POLICY anon_sign_in
-  ON public.groups
+  CREATE POLICY privileged_sign_in
+  ON api.groups
   AS PERMISSIVE
   FOR SELECT
-  TO anonymous
+  TO privileged
   USING (true);
 
-  COMMENT ON POLICY anon_sign_in ON public.groups IS 'Anonymous must be able to find their record in order to sign in';
+  COMMENT ON POLICY privileged_sign_in ON api.groups IS 'Anonymous must have some kind of way to authenticate. Privileged is the user that is allowed to do this operation.';
 
 
 COMMIT;

@@ -4,7 +4,7 @@ SET client_min_messages TO 'warning';
 
 BEGIN;
 
-  DROP TRIGGER IF EXISTS check_role_exists ON public.users;
+  DROP TRIGGER IF EXISTS check_role_exists ON api.users;
 
 COMMIT;
 

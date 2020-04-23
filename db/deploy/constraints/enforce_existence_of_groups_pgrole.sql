@@ -15,10 +15,10 @@ BEGIN;
   END
   $$ LANGUAGE plpgsql;
 
-  DROP TRIGGER IF EXISTS check_role_exists ON public.groups;
+  DROP TRIGGER IF EXISTS check_role_exists ON api.groups;
   CREATE CONSTRAINT TRIGGER check_role_exists
   AFTER INSERT OR UPDATE OF pgrole
-  ON public.groups
+  ON api.groups
   FOR EACH ROW
   EXECUTE FUNCTION public.check_role_exists();
 

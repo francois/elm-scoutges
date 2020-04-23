@@ -4,7 +4,7 @@ SET client_min_messages TO 'warning';
 
 BEGIN;
 
-  REVOKE ALL PRIVILEGES ON TABLE public.groups FROM PUBLIC;
+  REVOKE ALL PRIVILEGES ON TABLE api.groups FROM PUBLIC;
 
 COMMIT;
 

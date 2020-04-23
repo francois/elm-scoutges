@@ -4,7 +4,7 @@ SET client_min_messages TO 'warning';
 
 BEGIN;
 
-  DROP TRIGGER IF EXISTS encrypt_users_password ON public.users;
+  DROP TRIGGER IF EXISTS encrypt_users_password ON api.users;
 
 COMMIT;
 

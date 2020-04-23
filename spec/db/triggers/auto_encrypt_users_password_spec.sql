@@ -9,7 +9,7 @@ BEGIN;
     SELECT lives_ok('p1');
 
     SELECT matches(password, '^\$2a\$' || right('00' || current_setting('security.bf_strength'), 2) || '\$', 'password was encrypted')
-    FROM users
+    FROM api.users
     WHERE email = 'carnival@teksol.info';
   RESET ROLE;
 

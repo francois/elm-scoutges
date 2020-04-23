@@ -7,7 +7,8 @@ BEGIN;
 
   REVOKE ALL PRIVILEGES ON SCHEMA api FROM PUBLIC;
 
-  GRANT usage ON SCHEMA api TO anonymous, authenticated;
+  GRANT ALL PRIVILEGES ON SCHEMA public TO current_user;
+  GRANT usage ON SCHEMA api TO anonymous, authenticated, privileged;
 
 COMMIT;
 

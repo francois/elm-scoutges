@@ -8,13 +8,13 @@ BEGIN;
   DECLARE
     row record;
   BEGIN
-    TRUNCATE public.users CASCADE;
+    TRUNCATE api.users CASCADE;
 
-    FOR row IN SELECT pgrole FROM groups LOOP
+    FOR row IN SELECT pgrole FROM api.groups LOOP
       EXECUTE 'DROP ROLE ' || quote_ident(row.pgrole);
     END LOOP;
 
-    TRUNCATE public.groups, que_jobs CASCADE;
+    TRUNCATE api.groups, que_jobs CASCADE;
   END
   $$ LANGUAGE plpgsql SECURITY DEFINER;
 

@@ -53,7 +53,6 @@ type alias Model =
 type alias User =
     { name : String
     , email : String
-    , groupName : String
     , phone : String
     , registeredAt : String
     }
@@ -841,12 +840,11 @@ registrationResponseDecoder =
 
 userDecoder : Decode.Decoder User
 userDecoder =
-    Decode.map5 User
-        (Decode.field "user_name" Decode.string)
-        (Decode.field "user_email" Decode.string)
-        (Decode.field "group_name" Decode.string)
-        (Decode.field "user_phone" Decode.string)
-        (Decode.field "user_registered_at" Decode.string)
+    Decode.map4 User
+        (Decode.field "name" Decode.string)
+        (Decode.field "email" Decode.string)
+        (Decode.field "phone" Decode.string)
+        (Decode.field "registered_at" Decode.string)
 
 
 userListDecoder : Decode.Decoder (List User)
@@ -933,7 +931,7 @@ getAllUsers token =
     Http.request
         { method = "GET"
         , headers = [ Http.header "Authorization" ("Bearer " ++ token), Http.header "Accept" "application/json" ]
-        , url = "/api/users"
+        , url = "/api/users?select=name,email,phone,registered_at"
         , body = Http.emptyBody
         , expect = Http.expectJson UsersLoaded userListDecoder
         , timeout = Nothing
