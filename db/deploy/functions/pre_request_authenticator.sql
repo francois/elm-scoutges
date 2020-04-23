@@ -17,7 +17,8 @@ BEGIN;
     INTO result
     FROM public.active_jwt_tokens
     WHERE jid = current_setting('request.jwt.claim.jti', true)::uuid
-      AND email = current_setting('request.jwt.claim.sub', true);
+      AND email = current_setting('request.jwt.claim.sub', true)
+      AND current_setting('request.jwt.claim.aud', true) = 'scoutges';
 
     IF found THEN
       RETURN true;

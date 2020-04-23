@@ -18,7 +18,7 @@ BEGIN;
 
   GRANT
       SELECT(pgrole, email, password, name, phone, group_name, registered_at)
-  ON public.users TO anonymous;
+  ON public.users TO privileged;
 
 COMMIT;
 

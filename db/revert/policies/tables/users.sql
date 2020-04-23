@@ -5,7 +5,7 @@ SET client_min_messages TO 'warning';
 BEGIN;
 
   DROP POLICY group_crud ON public.users;
-  DROP POLICY anon_sign_in ON public.users;
+  DROP POLICY privileged_sign_in ON public.users;
 
 COMMIT;
 

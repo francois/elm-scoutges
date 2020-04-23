@@ -18,14 +18,14 @@ BEGIN;
 
   COMMENT ON POLICY group_crud ON public.users IS 'Every user can read all users of their group';
 
-  CREATE POLICY anon_sign_in
+  CREATE POLICY privileged_sign_in
   ON public.users
   AS PERMISSIVE
   FOR SELECT
-  TO anonymous
+  TO privileged
   USING (true);
 
-  COMMENT ON POLICY anon_sign_in ON public.users IS 'Anonymous must be able to find their record in order to sign in.';
+  COMMENT ON POLICY privileged_sign_in ON public.users IS 'Anonymous must have some kind of way to authenticate. Privileged is the user that is allowed to do this operation.';
 
 COMMIT;
 
