@@ -10,7 +10,7 @@ BEGIN;
   RESET ROLE;
 
   SET LOCAL ROLE TO "1er Drummondville";
-    SELECT lives_ok('INSERT INTO public.users(email, password, group_name, name, phone) VALUES (''john@teksol.info'', ''monkey'', ''1er Drummondville'', ''John'', '''')');
+    SELECT lives_ok('INSERT INTO api.users(email, password, group_name, name, phone) VALUES (''john@teksol.info'', ''monkey'', ''1er Drummondville'', ''John'', '''')');
   RESET ROLE;
 
   SET LOCAL ROLE TO anonymous;
@@ -20,7 +20,7 @@ BEGIN;
   SET LOCAL ROLE TO "1er Drummondville";
     SET LOCAL "request.jwt.claim.email" TO 'john@teksol.info';
 
-    PREPARE p4 AS SELECT email FROM users;
+    PREPARE p4 AS SELECT email FROM api.users;
     SELECT set_eq('p4', array['bob@teksol.info', 'john@teksol.info'], 'can only view records within my own group');
 
     RESET "request.jwt.claim.email";
@@ -29,7 +29,7 @@ BEGIN;
   SET LOCAL ROLE TO "4ème St-Hubert";
     SET LOCAL "request.jwt.claim.email" TO 'peter@teksol.info';
 
-    PREPARE p5 AS UPDATE users SET name = 'Peter' RETURNING email, name;
+    PREPARE p5 AS UPDATE api.users SET name = 'Peter' RETURNING email, name;
     SELECT results_eq('p5', 'VALUES(''peter@teksol.info'', ''Peter'')', 'can only edit my own record');
     RESET "request.jwt.claim.email";
   RESET ROLE;

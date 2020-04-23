@@ -10,12 +10,16 @@ BEGIN;
   DECLARE
     group_name text;
   BEGIN
+    RAISE NOTICE 'api.invite(%); current_user: %', emails, current_user;
+
     SELECT name
     INTO group_name
-    FROM public.groups
+    FROM api.groups
     LIMIT 1;
 
-    INSERT INTO public.users(email, password, name, group_name, phone)
+    RAISE NOTICE 'group_name: %', group_name;
+
+    INSERT INTO api.users(email, password, name, group_name, phone)
       SELECT email, gen_random_uuid(), email, group_name, ''
       FROM unnest(emails) AS e(email);
 

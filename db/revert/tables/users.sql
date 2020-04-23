@@ -4,7 +4,7 @@ SET client_min_messages TO 'warning';
 
 BEGIN;
 
-  DROP TABLE public.users CASCADE;
+  DROP TABLE api.users CASCADE;
 
 COMMIT;
 

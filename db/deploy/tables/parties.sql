@@ -15,7 +15,7 @@ BEGIN;
 
     , pgrole text not null
         default current_user
-        references public.groups(pgrole) on update cascade on delete restrict
+        references api.groups(pgrole) on update cascade on delete restrict
   );
 
   COMMENT ON TABLE api.parties IS 'The list of all parties a group makes business with. \"parties\" here is taken in a large sense: it includes suppliers, troops and actual leasers of products of this scout group.';

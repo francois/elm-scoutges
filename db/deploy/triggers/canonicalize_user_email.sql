@@ -12,10 +12,10 @@ BEGIN;
   END
   $$ LANGUAGE plpgsql;
 
-  DROP TRIGGER IF EXISTS canonicalize_user_email ON public.users;
+  DROP TRIGGER IF EXISTS canonicalize_user_email ON api.users;
   CREATE TRIGGER canonicalize_user_email
   BEFORE INSERT OR UPDATE OF email
-  ON public.users
+  ON api.users
   FOR EACH ROW
   EXECUTE FUNCTION public.canonicalize_user_email();
 

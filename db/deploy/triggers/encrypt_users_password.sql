@@ -14,11 +14,11 @@ BEGIN;
   END
   $$ LANGUAGE plpgsql;
 
-  DROP TRIGGER IF EXISTS encrypt_users_password ON public.users;
+  DROP TRIGGER IF EXISTS encrypt_users_password ON api.users;
 
   CREATE TRIGGER encrypt_users_password
   BEFORE INSERT OR UPDATE OF password
-  ON public.users
+  ON api.users
   FOR EACH ROW
   EXECUTE FUNCTION public.encrypt_users_password();
 

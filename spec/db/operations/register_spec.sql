@@ -15,8 +15,8 @@ BEGIN;
   SET LOCAL ROLE TO "11ème Daveluyville";
     PREPARE p2 AS
       SELECT users.email, users.name, users.phone, users.group_name
-      FROM public.users
-      JOIN public.groups ON group_name = groups.name;
+      FROM api.users
+      JOIN api.groups ON group_name = groups.name;
     SELECT results_eq('p2'
       , 'VALUES(''boubou@teksol.info'', ''Francois'', ''888 111-2222'', ''11ème Daveluyville'')'
       , 'sets role to group name');

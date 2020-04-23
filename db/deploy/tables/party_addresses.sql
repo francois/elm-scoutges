@@ -15,7 +15,7 @@ BEGIN;
 
     , pgrole text not null
         default current_user
-        references public.groups(pgrole) on update cascade on delete restrict
+        references api.groups(pgrole) on update cascade on delete restrict
     , unique(party_slug, name)
   );
 

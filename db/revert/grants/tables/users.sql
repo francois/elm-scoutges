@@ -4,7 +4,7 @@ SET client_min_messages TO 'warning';
 
 BEGIN;
 
-  REVOKE SELECT, INSERT ON public.users FROM anonymous;
+  REVOKE SELECT, INSERT ON api.users FROM anonymous;
 
 COMMIT;
 

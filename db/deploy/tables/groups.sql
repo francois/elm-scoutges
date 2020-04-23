@@ -4,7 +4,7 @@ SET client_min_messages TO 'warning';
 
 BEGIN;
 
-  CREATE TABLE public.groups(
+  CREATE TABLE api.groups(
       id serial not null unique
     , name text not null check(length(name) > 1) primary key
     , slug text not null unique
@@ -12,7 +12,7 @@ BEGIN;
     , registered_at timestamp with time zone not null default current_timestamp
   );
 
-  COMMENT ON TABLE public.groups IS 'Records the list of scout groups that have registered on scoutges';
+  COMMENT ON TABLE api.groups IS 'Records the list of scout groups that have registered on scoutges';
 
 COMMIT;
 

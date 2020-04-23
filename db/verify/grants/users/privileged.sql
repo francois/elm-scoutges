@@ -1,4 +1,4 @@
--- Verify scoutges:views/users on pg
+-- Verify scoutges-test:grants/users/privileged on pg
 
 SET client_min_messages TO 'warning';
 
