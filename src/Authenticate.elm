@@ -1,5 +1,6 @@
-module Authenticate exposing (Model, Msg, init, update, view)
+module Authenticate exposing (Model, Msg, init, routeParser, update, view)
 
+import Browser.Navigation as Nav
 import Colors exposing (..)
 import Element exposing (Color, Element, centerX, centerY, column, el, fill, height, link, padding, px, rgb255, row, spacing, text, width)
 import Element.Background as Background
@@ -8,8 +9,12 @@ import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
 import Html.Events
+import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
+import Url
+import Url.Builder as Builder
+import Url.Parser as Parser
 
 
 type alias JwtToken =
@@ -26,6 +31,7 @@ type AuthenticationState
 type Page
     = SignInPage
     | RegisterPage
+    | UnknownPage
 
 
 type alias Model =
@@ -36,7 +42,12 @@ type alias Model =
     , phone : String
     , page : Page
     , authenticationState : AuthenticationState
+    , key : Nav.Key
     }
+
+
+type alias AuthenticationResponse =
+    { token : JwtToken }
 
 
 type Msg
@@ -47,15 +58,33 @@ type Msg
     | FillInPhone String
     | RunSignIn
     | RunRegister
-    | Go Page
+    | SignInResult (Result Http.Error AuthenticationResponse)
+    | RegisterResult (Result Http.Error AuthenticationResponse)
 
 
-init : Model
-init =
-    { email = "", password = "", name = "", groupName = "", phone = "", page = SignInPage, authenticationState = Anonymous }
+init : Url.Url -> Nav.Key -> Model
+init url key =
+    let
+        page =
+            case Parser.parse routeParser url of
+                Just x ->
+                    x
+
+                Nothing ->
+                    UnknownPage
+    in
+    { email = ""
+    , password = ""
+    , name = ""
+    , groupName = ""
+    , phone = ""
+    , page = page
+    , authenticationState = Anonymous
+    , key = key
+    }
 
 
-update : Msg -> Model -> ( Model, Cmd a )
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         FillInEmail str ->
@@ -74,13 +103,22 @@ update msg model =
             ( { model | phone = str }, Cmd.none )
 
         RunSignIn ->
-            ( model, Cmd.none )
+            ( { model | authenticationState = InProgress }, signIn model )
+
+        SignInResult (Ok resp) ->
+            ( { model | authenticationState = Authenticated resp.token }, Cmd.none )
+
+        SignInResult (Err _) ->
+            ( { model | authenticationState = Failed }, Cmd.none )
 
         RunRegister ->
-            ( model, Cmd.none )
+            ( { model | authenticationState = InProgress }, register model )
 
-        Go page ->
-            ( { init | page = page }, Cmd.none )
+        RegisterResult (Ok resp) ->
+            ( { model | authenticationState = Authenticated resp.token }, Cmd.none )
+
+        RegisterResult (Err _) ->
+            ( { model | authenticationState = Failed }, Cmd.none )
 
 
 view : Model -> Element Msg
@@ -91,6 +129,14 @@ view model =
 
         RegisterPage ->
             viewRegister model
+
+        UnknownPage ->
+            view404 model
+
+
+view404 : Model -> Element Msg
+view404 model =
+    el [] (text "404")
 
 
 viewSignIn : Model -> Element Msg
@@ -241,17 +287,20 @@ signInOrAuthenticateTabView model =
 
                 SignInPage ->
                     ( gray7, gray6 )
+
+                UnknownPage ->
+                    ( gray3, gray4 )
     in
     row [ width fill, Region.heading 1, Font.size 32, Background.color gray6 ]
         [ el [ padding 8, width (Element.fillPortion 1), Background.color bgCol1 ]
-            (Input.button [ centerX, width fill, height fill ]
-                { onPress = Just (Go SignInPage)
+            (Element.link [ centerX, width fill, height fill ]
+                { url = "/sign-in"
                 , label = text "Sign In"
                 }
             )
         , el [ padding 8, width (Element.fillPortion 1), Background.color bgCol2 ]
-            (Input.button [ centerX, width fill, height fill ]
-                { onPress = Just (Go RegisterPage)
+            (Element.link [ centerX, width fill, height fill ]
+                { url = "/register"
                 , label = text "Register"
                 }
             )
@@ -273,3 +322,53 @@ onEnter msg =
                     )
             )
         )
+
+
+signIn : Model -> Cmd Msg
+signIn req =
+    Http.post
+        { url = "/api/rpc/sign_in"
+        , body = Http.jsonBody (signInRequestEncoder req)
+        , expect = Http.expectJson SignInResult authenticationResponseDecoder
+        }
+
+
+signInRequestEncoder : Model -> Encode.Value
+signInRequestEncoder req =
+    Encode.object
+        [ ( "email", Encode.string req.email )
+        , ( "password", Encode.string req.password )
+        ]
+
+
+register : Model -> Cmd Msg
+register req =
+    Http.post
+        { url = "/api/rpc/register"
+        , body = Http.jsonBody (registerRequestEncoder req)
+        , expect = Http.expectJson RegisterResult authenticationResponseDecoder
+        }
+
+
+registerRequestEncoder : Model -> Encode.Value
+registerRequestEncoder req =
+    Encode.object
+        [ ( "email", Encode.string req.email )
+        , ( "password", Encode.string req.password )
+        , ( "name", Encode.string req.name )
+        , ( "group_name", Encode.string req.groupName )
+        , ( "phone", Encode.string req.phone )
+        ]
+
+
+authenticationResponseDecoder : Decode.Decoder AuthenticationResponse
+authenticationResponseDecoder =
+    Decode.map AuthenticationResponse (Decode.field "token" Decode.string)
+
+
+routeParser : Parser.Parser (Page -> a) a
+routeParser =
+    Parser.oneOf
+        [ Parser.map SignInPage (Parser.s "sign-in")
+        , Parser.map RegisterPage (Parser.s "register")
+        ]

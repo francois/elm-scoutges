@@ -72,22 +72,12 @@ type AuthenticationState
     | Authenticated JwtToken
 
 
-type alias RegistrationResponse =
-    { token : String
-    }
-
-
 type alias RegistrationForm =
     { email : String
     , password : String
     , name : String
     , groupName : String
     , phone : String
-    }
-
-
-type alias SignInResponse =
-    { token : String
     }
 
 
@@ -101,7 +91,7 @@ init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
     case Parser.parse routeParser url of
         Just SignIn ->
-            initWithSignIn key
+            initWithSignIn url key
 
         Just Register ->
             ( { authenticationState = Anonymous
@@ -109,7 +99,7 @@ init flags url key =
               , key = key
               , route = ( Register, Just (RegistrationData newRegistrationRequest) )
               , parties = NotLoaded
-              , auth = Authenticate.init
+              , auth = Authenticate.init url key
               }
             , manageJwtToken ( "clear", "" )
             )
@@ -125,32 +115,32 @@ init flags url key =
                                   , key = key
                                   , route = ( Dashboard, Nothing )
                                   , parties = NotLoaded
-                                  , auth = Authenticate.init
+                                  , auth = Authenticate.init url key
                                   }
                                 , Nav.replaceUrl key (buildUrl Dashboard)
                                 )
 
                             else
-                                initWithSignIn key
+                                initWithSignIn url key
 
                         Err _ ->
-                            initWithSignIn key
+                            initWithSignIn url key
 
                 Nothing ->
-                    initWithSignIn key
+                    initWithSignIn url key
 
         Nothing ->
-            initWithSignIn key
+            initWithSignIn url key
 
 
-initWithSignIn : Nav.Key -> ( Model, Cmd Msg )
-initWithSignIn key =
+initWithSignIn : Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+initWithSignIn url key =
     ( { authenticationState = Anonymous
       , users = NotLoaded
       , key = key
       , route = ( SignIn, Just (SignInData newSignInRequest) )
       , parties = NotLoaded
-      , auth = Authenticate.init
+      , auth = Authenticate.init url key
       }
     , Cmd.batch
         [ manageJwtToken ( "clear", "" )
@@ -185,9 +175,7 @@ newRegistrationRequest =
 
 
 type Msg
-    = SignInResult (Result Http.Error SignInResponse)
-    | RegisterResult (Result Http.Error RegistrationResponse)
-    | UsersLoaded (Result Http.Error (List User))
+    = UsersLoaded (Result Http.Error (List User))
     | LinkClicked Browser.UrlRequest
     | UrlChanged Url.Url
     | Go Route
@@ -204,22 +192,6 @@ update msg model =
         PartiesLoaded (Err err) ->
             ( { model | parties = Failure err }, Cmd.none )
 
-        SignInResult (Ok resp) ->
-            ( { model | authenticationState = Authenticated resp.token, users = Loading }
-            , Cmd.batch [ getAllUsers resp.token, manageJwtToken ( "set", resp.token ), Nav.pushUrl model.key (buildUrl Dashboard) ]
-            )
-
-        SignInResult (Err _) ->
-            ( { model | authenticationState = Failed, users = NotLoaded }, Cmd.none )
-
-        RegisterResult (Ok resp) ->
-            ( { model | authenticationState = Authenticated resp.token, users = Loading }
-            , Cmd.batch [ getAllUsers resp.token, manageJwtToken ( "set", resp.token ), Nav.pushUrl model.key (buildUrl Dashboard) ]
-            )
-
-        RegisterResult (Err _) ->
-            ( { model | authenticationState = Failed, users = NotLoaded }, Cmd.none )
-
         UsersLoaded (Ok users) ->
             ( { model | users = Loaded users }, Cmd.none )
 
@@ -235,31 +207,30 @@ update msg model =
                     ( model, Nav.load href )
 
         UrlChanged url ->
-            case Parser.parse routeParser url of
-                Just SignIn ->
-                    ( { model | route = ( SignIn, Just (SignInData newSignInRequest) ) }, Cmd.none )
+            case Parser.parse Authenticate.routeParser url of
+                Just _ ->
+                    ( { model | auth = Authenticate.init url model.key }, Cmd.none )
 
-                Just Register ->
-                    ( { model | route = ( Register, Just (RegistrationData newRegistrationRequest) ) }, Cmd.none )
+                Nothing ->
+                    case Parser.parse routeParser url of
+                        Just Dashboard ->
+                            case model.authenticationState of
+                                Authenticated token ->
+                                    ( { model | route = ( Dashboard, Nothing ), users = Loading }, getAllUsers token )
 
-                Just Dashboard ->
-                    case model.authenticationState of
-                        Authenticated token ->
-                            ( { model | route = ( Dashboard, Nothing ), users = Loading }, getAllUsers token )
+                                _ ->
+                                    ( model, Cmd.none )
+
+                        Just Parties ->
+                            case model.authenticationState of
+                                Authenticated token ->
+                                    ( { model | route = ( Parties, Nothing ), parties = Loading }, getAllParties token )
+
+                                _ ->
+                                    ( model, Cmd.none )
 
                         _ ->
-                            ( model, Cmd.none )
-
-                Just Parties ->
-                    case model.authenticationState of
-                        Authenticated token ->
-                            ( { model | route = ( Parties, Nothing ), parties = Loading }, getAllParties token )
-
-                        _ ->
-                            ( model, Cmd.none )
-
-                _ ->
-                    ( { model | route = ( SignIn, Just (SignInData newSignInRequest) ) }, Cmd.none )
+                            ( { model | route = ( SignIn, Just (SignInData newSignInRequest) ) }, Cmd.none )
 
         Go route ->
             ( model, Nav.pushUrl model.key (buildUrl route) )
@@ -269,7 +240,7 @@ update msg model =
                 ( newmodel, cmds ) =
                     Authenticate.update m model.auth
             in
-            ( { model | auth = newmodel }, cmds )
+            ( { model | auth = newmodel }, Cmd.map Auth cmds )
 
 
 
@@ -475,41 +446,12 @@ partyKindDecoder =
         Decode.string
 
 
-authenticationRequestEncoder : SignInForm -> Encode.Value
-authenticationRequestEncoder req =
-    Encode.object
-        [ ( "email", Encode.string req.email )
-        , ( "password", Encode.string req.password )
-        ]
-
-
 jwtDecoder : Decode.Decoder JwtDetails
 jwtDecoder =
     Decode.map3 JwtDetails
         (Decode.field "exp" Decode.int)
         (Decode.field "sub" Decode.string)
         (Decode.field "jti" Decode.string)
-
-
-authenticationResponseDecoder : Decode.Decoder SignInResponse
-authenticationResponseDecoder =
-    Decode.map SignInResponse (Decode.field "token" Decode.string)
-
-
-registrationRequestEncoder : RegistrationForm -> Encode.Value
-registrationRequestEncoder req =
-    Encode.object
-        [ ( "email", Encode.string req.email )
-        , ( "password", Encode.string req.password )
-        , ( "name", Encode.string req.name )
-        , ( "group_name", Encode.string req.groupName )
-        , ( "phone", Encode.string req.phone )
-        ]
-
-
-registrationResponseDecoder : Decode.Decoder RegistrationResponse
-registrationResponseDecoder =
-    Decode.map RegistrationResponse (Decode.field "token" Decode.string)
 
 
 userDecoder : Decode.Decoder User
@@ -580,24 +522,6 @@ parseJWT token =
 
 
 ---- Commands ----
-
-
-register : RegistrationForm -> Cmd Msg
-register req =
-    Http.post
-        { url = "/api/rpc/register"
-        , body = Http.jsonBody (registrationRequestEncoder req)
-        , expect = Http.expectJson RegisterResult registrationResponseDecoder
-        }
-
-
-signIn : SignInForm -> Cmd Msg
-signIn req =
-    Http.post
-        { url = "/api/rpc/sign_in"
-        , body = Http.jsonBody (authenticationRequestEncoder req)
-        , expect = Http.expectJson SignInResult authenticationResponseDecoder
-        }
 
 
 getAllUsers : JwtToken -> Cmd Msg
