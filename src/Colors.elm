@@ -68,6 +68,16 @@ white =
     rgb255 255 255 255
 
 
+errorBackgroundColor : Color
+errorBackgroundColor =
+    gray7
+
+
+errorTextColor : Color
+errorTextColor =
+    rgb255 240 16 16
+
+
 spinner : Element msg
 spinner =
     Element.image [ width (px 64), centerX, centerY ]

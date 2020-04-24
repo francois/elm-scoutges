@@ -39,6 +39,7 @@ let app = Elm.Main.init({
   flags: { token, now: Date.now() }
 });
 
+/*
 app.ports.manageJwtToken.subscribe(function(tuple) {
   if (storageAvailable("localStorage")) {
     if (tuple[0] == "set") {
@@ -48,7 +49,7 @@ app.ports.manageJwtToken.subscribe(function(tuple) {
     }
   }
 });
-
+*/
 
 // If you want your app to work offline and load faster, you can change
 // unregister() to register() below. Note this comes with some pitfalls.
