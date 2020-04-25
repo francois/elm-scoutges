@@ -879,26 +879,27 @@ getAllUsers maybeToken =
         }
 
 
+partyKindDecoder : Decode.Decoder PartyKind
 partyKindDecoder =
     let
         mapper s =
             case s of
                 "customer" ->
-                    Customer
+                    Decode.succeed Customer
 
                 "supplier" ->
-                    Supplier
+                    Decode.succeed Supplier
 
                 "group" ->
-                    Group
+                    Decode.succeed Group
 
                 "troop" ->
-                    Troop
+                    Decode.succeed Troop
 
                 _ ->
-                    Customer
+                    Decode.fail ("Unknown party kind: [" ++ s ++ "]")
     in
-    Decode.map mapper Decode.string
+    Decode.string |> Decode.andThen mapper
 
 
 partyAddressDecoder =
