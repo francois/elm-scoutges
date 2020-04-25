@@ -909,12 +909,19 @@ partyAddressDecoder =
         (Decode.field "address" Decode.string)
 
 
+partyAddressesDecoder =
+    Decode.oneOf
+        [ Decode.list (Decode.null ()) |> Decode.map (\_ -> [])
+        , Decode.list partyAddressDecoder
+        ]
+
+
 completePartyDecoder =
     Decode.map4 FullParty
         (Decode.field "slug" Decode.string)
         (Decode.field "name" Decode.string)
         (Decode.field "kind" partyKindDecoder)
-        (Decode.field "addresses" (Decode.list partyAddressDecoder))
+        (Decode.field "addresses" partyAddressesDecoder)
 
 
 partyDecoder =
