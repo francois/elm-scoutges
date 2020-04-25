@@ -158,6 +158,18 @@ update msg model =
         ( RegistrationResponseReceived (Err err), Register form _ ) ->
             ( { model | submodel = Register form (Failure err) }, Cmd.none )
 
+        ( PartiesLoaded (Ok parties), Parties _ ) ->
+            ( { model | submodel = Parties (Loaded parties) }, Cmd.none )
+
+        ( PartiesLoaded (Err err), Parties _ ) ->
+            ( { model | submodel = Parties (Failure err) }, Cmd.none )
+
+        ( UsersLoaded (Ok users), Users _ ) ->
+            ( { model | submodel = Users (Loaded users) }, Cmd.none )
+
+        ( UsersLoaded (Err err), Users _ ) ->
+            ( { model | submodel = Users (Failure err) }, Cmd.none )
+
         ( LinkClicked target, _ ) ->
             case target of
                 Browser.Internal url ->
@@ -245,11 +257,11 @@ viewSubmodel model =
                 Dashboard ->
                     viewDashboard model.key model.submodel
 
-                Users _ ->
-                    el [] (text "Users not handled yet")
+                Parties list ->
+                    viewParties model.key list
 
-                Parties _ ->
-                    el [] (text "Parties not handled yet")
+                Users list ->
+                    viewUsers model.key list
 
                 NotFound ->
                     el [] (text "404 Not Found")
@@ -265,6 +277,38 @@ viewDashboard key model =
     Element.column []
         [ el [ Region.heading 1, Font.bold, Font.size 24 ] (text "Welcome to Scoutges")
         ]
+
+
+viewParties : Nav.Key -> Request (List Party) -> Element Msg
+viewParties key partiesRequest =
+    case partiesRequest of
+        NotLoaded ->
+            el [] (text "parties not loaded")
+
+        Loading ->
+            spinner
+
+        Failure _ ->
+            el [] (text "failed to load parties")
+
+        Loaded list ->
+            el [] (text (String.fromInt (List.length list) ++ " parties"))
+
+
+viewUsers : Nav.Key -> Request (List User) -> Element Msg
+viewUsers key usersRequest =
+    case usersRequest of
+        NotLoaded ->
+            el [] (text "users not loaded")
+
+        Loading ->
+            spinner
+
+        Failure _ ->
+            el [] (text "failed to load users")
+
+        Loaded list ->
+            el [] (text (String.fromInt (List.length list) ++ " users"))
 
 
 viewRegistration : Nav.Key -> RegistrationForm -> Request Token -> Element Msg
