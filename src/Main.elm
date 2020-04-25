@@ -151,12 +151,13 @@ type Msg
     | SubmitRegistration RegistrationForm
     | RegistrationResponseReceived (Result Http.Error Token)
     | PartiesLoaded (Result Http.Error (List Party))
-    | CompletePartyLoaded (Result Http.Error FullParty)
+    | FullPartyLoaded (Result Http.Error FullParty)
     | FillInPartyName Slug String
     | FillInPartyKind Slug PartyKind
     | FillInPartyAddressName Slug Slug String
     | FillInPartyAddressAddress Slug Slug String
-    | SubmitFullParty FullParty
+    | SaveFullParty FullParty
+    | FullPartySaved (Result Http.Error ())
     | UsersLoaded (Result Http.Error (List User))
     | UrlChanged Url
     | LinkClicked Browser.UrlRequest
@@ -214,11 +215,26 @@ update msg model =
         ( PartiesLoaded (Err err), Parties _ ) ->
             ( { model | submodel = Parties (Failure err) }, Cmd.none )
 
-        ( CompletePartyLoaded (Ok party), EditParty _ ) ->
+        ( FullPartyLoaded (Ok party), EditParty _ ) ->
             ( { model | submodel = EditParty (Loaded party) }, Cmd.none )
 
-        ( CompletePartyLoaded (Err err), EditParty _ ) ->
+        ( FullPartyLoaded (Err err), EditParty _ ) ->
             ( { model | submodel = EditParty (Failure err) }, Cmd.none )
+
+        ( FillInPartyName _ name, EditParty (Loaded fullParty) ) ->
+            ( { model | submodel = EditParty (Loaded { fullParty | name = name }) }, Cmd.none )
+
+        ( FillInPartyKind slug kind, EditParty fullParty ) ->
+            ( model, Cmd.none )
+
+        ( FillInPartyAddressName partySlug addressSlug name, EditParty fullParty ) ->
+            ( model, Cmd.none )
+
+        ( FillInPartyAddressAddress partySlug addressSlug address, EditParty fullParty ) ->
+            ( model, Cmd.none )
+
+        ( SaveFullParty fullParty, EditParty (Loaded _) ) ->
+            ( { model | submodel = EditParty Loading }, saveFullParty model.token fullParty )
 
         ( UsersLoaded (Ok users), Users _ ) ->
             ( { model | submodel = Users (Loaded users) }, Cmd.none )
@@ -389,7 +405,7 @@ viewEditParty key partyRequest =
                             ([ h2 "Addresses" ] ++ addresses)
                         ]
                     , Element.row [ spacing 4 ]
-                        [ Input.button ctaButtonStyles { label = text "Save", onPress = Just (SubmitFullParty party) }
+                        [ Input.button ctaButtonStyles { label = text "Save", onPress = Just (SaveFullParty party) }
                         , el [] (text "or")
                         , Element.link linkStyles { label = text "return to list", url = routeBuilder PartiesPage }
                         ]
@@ -941,7 +957,7 @@ getParty maybeToken slug =
         { method = "GET"
         , url = Builder.absolute [ "api", "rpc", "edit_party" ] [ Builder.string "slug" slug ]
         , body = Http.emptyBody
-        , expect = Http.expectJson CompletePartyLoaded completePartyDecoder
+        , expect = Http.expectJson FullPartyLoaded completePartyDecoder
         , headers = buildHeadersForOne maybeToken
         , timeout = Nothing
         , tracker = Nothing
@@ -956,6 +972,47 @@ getAllParties maybeToken =
         , body = Http.emptyBody
         , expect = Http.expectJson PartiesLoaded partiesDecoder
         , headers = buildHeadersForMany maybeToken
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
+partyKindEncoder : PartyKind -> Encode.Value
+partyKindEncoder kind =
+    let
+        val =
+            case kind of
+                Customer ->
+                    "customer"
+
+                Troop ->
+                    "troop"
+
+                Group ->
+                    "group"
+
+                Supplier ->
+                    "supplier"
+    in
+    Encode.string val
+
+
+fullPartyEncoder : FullParty -> Encode.Value
+fullPartyEncoder party =
+    Encode.object
+        [ ( "name", Encode.string party.name )
+        , ( "kind", partyKindEncoder party.kind )
+        ]
+
+
+saveFullParty : Maybe Token -> FullParty -> Cmd Msg
+saveFullParty maybeToken fullParty =
+    Http.request
+        { method = "POST"
+        , url = "/api/rpc/save_full_party"
+        , body = Http.jsonBody (fullPartyEncoder fullParty)
+        , expect = Http.expectWhatever FullPartySaved
+        , headers = buildHeadersForOne maybeToken
         , timeout = Nothing
         , tracker = Nothing
         }
