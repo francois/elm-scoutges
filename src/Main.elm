@@ -55,7 +55,10 @@ type alias Party =
 
 
 type alias User =
-    { name : String }
+    { name : String
+    , email : String
+    , phone : String
+    }
 
 
 type Submodel
@@ -270,7 +273,7 @@ viewSubmodel model =
                 NotFound ->
                     el [] (text "404 Not Found")
     in
-    el [ outerPadding, centerX, Region.mainContent ] body
+    el [ outerPadding, centerX, width fill, Region.mainContent ] body
 
 
 outerPadding =
@@ -296,7 +299,12 @@ viewParties key partiesRequest =
             el [] (text "failed to load parties")
 
         Loaded list ->
-            el [] (text (String.fromInt (List.length list) ++ " parties"))
+            Element.table [ Element.alignLeft, width (px 800) ]
+                { data = list
+                , columns =
+                    [ { header = el [ Font.bold ] (text "Name"), width = fill, view = \party -> el [] (text party.name) }
+                    ]
+                }
 
 
 viewUsers : Nav.Key -> Request (List User) -> Element Msg
@@ -312,7 +320,23 @@ viewUsers key usersRequest =
             el [] (text "failed to load users")
 
         Loaded list ->
-            el [] (text (String.fromInt (List.length list) ++ " users"))
+            Element.table []
+                { data = list
+                , columns =
+                    [ { header = el [ width fill, padding 4, Background.color gray7, Font.color gray2, Font.bold, height (px 24) ] (text "Name")
+                      , width = fill
+                      , view = \user -> el [ padding 8 ] (text user.name)
+                      }
+                    , { header = el [ width fill, padding 4, Background.color gray7, Font.color gray2, Font.bold, height (px 24) ] (text "Email")
+                      , width = fill
+                      , view = \user -> Element.link [ padding 8 ] { label = text user.email, url = "mailto:" ++ user.email }
+                      }
+                    , { header = el [ width fill, padding 4, Background.color gray7, Font.color gray2, Font.bold, height (px 24) ] (text "Phone")
+                      , width = fill
+                      , view = \user -> el [ padding 8 ] (text user.phone)
+                      }
+                    ]
+                }
 
 
 viewRegistration : Nav.Key -> RegistrationForm -> Request Token -> Element Msg
@@ -599,7 +623,10 @@ submitRegistration form =
 
 
 userDecoder =
-    Decode.map User (Decode.field "name" Decode.string)
+    Decode.map3 User
+        (Decode.field "name" Decode.string)
+        (Decode.field "email" Decode.string)
+        (Decode.field "phone" Decode.string)
 
 
 usersDecoder =
@@ -610,7 +637,7 @@ getAllUsers : Maybe Token -> Cmd Msg
 getAllUsers maybeToken =
     Http.request
         { method = "GET"
-        , url = "/api/users?select=name"
+        , url = "/api/users?select=name,email,phone"
         , body = Http.emptyBody
         , expect = Http.expectJson UsersLoaded usersDecoder
         , headers = buildHeaders maybeToken
