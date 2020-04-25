@@ -50,8 +50,17 @@ type alias RegistrationForm =
     { email : String, password : String, name : String, groupName : String, phone : String }
 
 
+type PartyKind
+    = Customer
+    | Supplier
+    | Group
+    | Troop
+
+
 type alias Party =
-    { name : String }
+    { name : String
+    , kind : PartyKind
+    }
 
 
 type alias User =
@@ -303,8 +312,24 @@ viewParties key partiesRequest =
                 { data = list
                 , columns =
                     [ { header = el [ Font.bold ] (text "Name"), width = fill, view = \party -> el [] (text party.name) }
+                    , { header = el [ Font.bold ] (text "Kind"), width = fill, view = \party -> el [] (text (kindToString party.kind)) }
                     ]
                 }
+
+
+kindToString kind =
+    case kind of
+        Customer ->
+            "Customer"
+
+        Troop ->
+            "Troop"
+
+        Group ->
+            "Group"
+
+        Supplier ->
+            "Supplier"
 
 
 viewUsers : Nav.Key -> Request (List User) -> Element Msg
@@ -646,8 +671,32 @@ getAllUsers maybeToken =
         }
 
 
+partyKindDecoder =
+    let
+        mapper s =
+            case s of
+                "customer" ->
+                    Customer
+
+                "supplier" ->
+                    Supplier
+
+                "group" ->
+                    Group
+
+                "troop" ->
+                    Troop
+
+                _ ->
+                    Customer
+    in
+    Decode.map mapper Decode.string
+
+
 partyDecoder =
-    Decode.map Party (Decode.field "name" Decode.string)
+    Decode.map2 Party
+        (Decode.field "name" Decode.string)
+        (Decode.field "kind" partyKindDecoder)
 
 
 partiesDecoder =
@@ -658,7 +707,7 @@ getAllParties : Maybe Token -> Cmd Msg
 getAllParties maybeToken =
     Http.request
         { method = "GET"
-        , url = "/api/parties?select=name"
+        , url = "/api/parties?select=name,kind"
         , body = Http.emptyBody
         , expect = Http.expectJson PartiesLoaded partiesDecoder
         , headers = buildHeaders maybeToken
