@@ -413,7 +413,25 @@ registrationForm form reason =
                 Just str ->
                     el attrs (text ("Invalid email or password. " ++ str))
     in
-    [ Input.email [ onEnter (SubmitRegistration form) ]
+    [ Input.text [ onEnter (SubmitRegistration form) ]
+        { onChange = FillInGroupName
+        , text = form.groupName
+        , placeholder = Nothing
+        , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Group's Name")
+        }
+    , Input.text [ onEnter (SubmitRegistration form) ]
+        { onChange = FillInName
+        , text = form.name
+        , placeholder = Nothing
+        , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Your Name")
+        }
+    , Input.text [ onEnter (SubmitRegistration form) ]
+        { onChange = FillInPhone
+        , text = form.phone
+        , placeholder = Nothing
+        , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Phone")
+        }
+    , Input.email [ onEnter (SubmitRegistration form) ]
         { onChange = FillInEmail
         , text = form.email
         , placeholder = Nothing
@@ -425,24 +443,6 @@ registrationForm form reason =
         , placeholder = Nothing
         , show = False
         , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Password")
-        }
-    , Input.text [ onEnter (SubmitRegistration form) ]
-        { onChange = FillInName
-        , text = form.name
-        , placeholder = Nothing
-        , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Your Name")
-        }
-    , Input.text [ onEnter (SubmitRegistration form) ]
-        { onChange = FillInGroupName
-        , text = form.groupName
-        , placeholder = Nothing
-        , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Group's Name")
-        }
-    , Input.text [ onEnter (SubmitRegistration form) ]
-        { onChange = FillInPhone
-        , text = form.phone
-        , placeholder = Nothing
-        , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Phone")
         }
     , failedMessage
     , Input.button [ centerX, onEnter (SubmitRegistration form) ]

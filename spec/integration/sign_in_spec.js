@@ -23,7 +23,7 @@ describe("Authentication", () => {
     cy.visit("/");
     cy.contains("Sign In Now").click();
 
-    cy.contains("Invalid username or password");
+    cy.contains("Invalid email or password");
   });
 
   it("fails to sign in when using the correct email but wrong password", () => {
@@ -32,7 +32,7 @@ describe("Authentication", () => {
     cy.get("input[type=password]").type("powwow");
     cy.contains("Sign In Now").click();
 
-    cy.contains("Invalid username or password");
+    cy.contains("Invalid email or password");
   });
 
   it("fails to sign in when using an incorrect email", () => {
@@ -41,7 +41,7 @@ describe("Authentication", () => {
     cy.get("input[type=password]").type("monkeymonkey");
     cy.contains("Sign In Now").click();
 
-    cy.contains("Invalid username or password");
+    cy.contains("Invalid email or password");
   });
 
   it("signs in with a valid email / password combination", () => {

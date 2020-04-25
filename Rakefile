@@ -94,7 +94,7 @@ namespace :spec do
   end
 
   desc "Generates *.t to enable prove to run over them"
-  task :prepare => %w( spec:clean spec/db/revert_deploy_spec.t ) + FileList["spec/integration/**/*_spec.js"].ext(".t") + FileList["spec/db/**/*_spec.sql"].ext(".t")
+  task :prepare => %w( spec:clean ) + FileList["spec/integration/**/*_spec.js"].ext(".t") + FileList["spec/db/**/*_spec.sql"].ext(".t")
 
   base_spec_deps = %w(
     Rakefile
@@ -108,12 +108,12 @@ namespace :spec do
   ruby_spec_deps        = FileList["spec/ruby/**/*_spec.rb"].ext(".t")
 
   desc "Runs all spec suites"
-  task :all => base_spec_deps + integration_spec_deps + db_spec_deps + ["spec/db/revert_deploy_spec.t"] + ruby_spec_deps do
+  task :all => base_spec_deps + integration_spec_deps + db_spec_deps + ruby_spec_deps do
     sh "prove spec"
   end
 
   desc "Runs the database specs"
-  task :db => base_spec_deps + db_spec_deps + ["spec/db/revert_deploy_spec.t"] do |t|
+  task :db => base_spec_deps + db_spec_deps do |t|
     sh [ "prove", *t.prerequisite_tasks.map(&:name).grep(/[.]t$/) ].shelljoin
   end
 
