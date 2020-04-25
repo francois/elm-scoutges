@@ -46,15 +46,32 @@ type alias Model =
     }
 
 
+type alias RegistrationForm =
+    { email : String, password : String, name : String, groupName : String, phone : String }
+
+
 type Submodel
     = SignIn String String (Request Token)
+    | Register RegistrationForm (Request Token)
     | Dashboard
     | NotFound Token
 
 
 init : Flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
-    ( { key = key, token = Nothing, submodel = SignIn "" "" NotLoaded }, Cmd.none )
+    case Parser.parse routeParser url of
+        Nothing ->
+            ( { key = key, token = Nothing, submodel = SignIn "" "" NotLoaded }, Cmd.none )
+
+        Just SignInPage ->
+            ( { key = key, token = Nothing, submodel = SignIn "" "" NotLoaded }, Cmd.none )
+
+        Just RegistrationPage ->
+            ( { key = key, token = Nothing, submodel = Register newRegistrationForm NotLoaded }, Cmd.none )
+
+
+newRegistrationForm =
+    { email = "", password = "", name = "", groupName = "", phone = "" }
 
 
 
@@ -64,8 +81,13 @@ init flags url key =
 type Msg
     = FillInEmail String
     | FillInPassword String
+    | FillInName String
+    | FillInGroupName String
+    | FillInPhone String
     | SubmitSignIn String String
     | SignInResponseReceived (Result Http.Error Token)
+    | SubmitRegistration RegistrationForm
+    | RegistrationResponseReceived (Result Http.Error Token)
     | UrlChanged Url
     | LinkClicked Browser.UrlRequest
 
@@ -87,6 +109,30 @@ update msg model =
 
         ( SignInResponseReceived (Err err), SignIn email password _ ) ->
             ( { model | submodel = SignIn email password (Failure err) }, Cmd.none )
+
+        ( FillInEmail str, Register form tokenRequest ) ->
+            ( { model | submodel = Register { form | email = str } tokenRequest }, Cmd.none )
+
+        ( FillInPassword str, Register form tokenRequest ) ->
+            ( { model | submodel = Register { form | password = str } tokenRequest }, Cmd.none )
+
+        ( FillInName str, Register form tokenRequest ) ->
+            ( { model | submodel = Register { form | name = str } tokenRequest }, Cmd.none )
+
+        ( FillInGroupName str, Register form tokenRequest ) ->
+            ( { model | submodel = Register { form | groupName = str } tokenRequest }, Cmd.none )
+
+        ( FillInPhone str, Register form tokenRequest ) ->
+            ( { model | submodel = Register { form | phone = str } tokenRequest }, Cmd.none )
+
+        ( SubmitRegistration form, Register _ _ ) ->
+            ( { model | submodel = Register form Loading }, submitRegistration form )
+
+        ( RegistrationResponseReceived (Ok token), Register _ _ ) ->
+            ( { model | submodel = Dashboard, token = Just token }, Nav.pushUrl model.key "/dashboard" )
+
+        ( RegistrationResponseReceived (Err err), Register form _ ) ->
+            ( { model | submodel = Register form (Failure err) }, Cmd.none )
 
         _ ->
             ( model, Cmd.none )
@@ -114,30 +160,145 @@ viewBody model =
 viewNavbar : Model -> Element Msg
 viewNavbar model =
     let
+        attrs =
+            [ Element.alignLeft, padding 4 ]
+
         elems =
             case model.token of
                 Nothing ->
                     []
 
                 _ ->
-                    [ Element.link [ Element.alignLeft, padding 4 ] { label = text "Dashboard", url = "/dashboard" }
-                    , Element.link [ Element.alignLeft, padding 4 ] { label = text "Parties", url = "/parties" }
-                    , Element.link [ Element.alignLeft, padding 4 ] { label = text "Users", url = "/users" }
+                    [ Element.link attrs { label = text "Dashboard", url = "/dashboard" }
+                    , Element.link attrs { label = text "Parties", url = "/parties" }
+                    , Element.link attrs { label = text "Users", url = "/users" }
                     , Element.link [ Element.alignRight, padding 4 ] { label = text "Account", url = "/account" }
                     ]
     in
-    Element.row [ width fill, height (px 40), padding 4, Background.color gray7, Font.color gray2 ]
-        [ Element.link [ Element.alignLeft, padding 4 ] { label = text "SCOUTGES", url = "/" } ]
+    Element.row [ Region.navigation, width fill, height (px 48), Element.paddingXY outerPaddingX outerPaddingY, Background.color gray7, Font.color gray2, spacing 16 ]
+        ([ Element.link attrs { label = text "SCOUTGES", url = "/" } ] ++ elems)
 
 
 viewSubmodel : Model -> Element Msg
 viewSubmodel model =
-    case model.submodel of
-        SignIn email password tokenRequest ->
-            viewSignIn model.key email password tokenRequest
+    let
+        body =
+            case model.submodel of
+                SignIn email password tokenRequest ->
+                    viewSignIn model.key email password tokenRequest
 
-        _ ->
-            el [] (text "not handled yet")
+                Register form tokenRequest ->
+                    viewRegistration model.key form tokenRequest
+
+                Dashboard ->
+                    viewDashboard model.key model.submodel
+
+                _ ->
+                    el [] (text "not handled yet")
+    in
+    el [ Element.paddingXY outerPaddingX outerPaddingY, centerX, Region.mainContent ] body
+
+
+outerPaddingX =
+    16
+
+
+outerPaddingY =
+    8
+
+
+viewDashboard key model =
+    Element.column []
+        [ el [ Region.heading 1, Font.size 24 ] (text "Welcome to Scoutges")
+        ]
+
+
+viewRegistration : Nav.Key -> RegistrationForm -> Request Token -> Element Msg
+viewRegistration key form requestToken =
+    let
+        contents =
+            case requestToken of
+                Loading ->
+                    [ el [ width fill, height fill ] Colors.spinner ]
+
+                Failure (Http.BadUrl str) ->
+                    registrationForm form (Just ("Bad url: " ++ str))
+
+                Failure Http.NetworkError ->
+                    registrationForm form (Just "Network error")
+
+                Failure Http.Timeout ->
+                    registrationForm form (Just "Timed out")
+
+                Failure (Http.BadStatus code) ->
+                    registrationForm form (Just ("Status " ++ String.fromInt code))
+
+                Failure (Http.BadBody str) ->
+                    registrationForm form (Just ("Bad body: " ++ str))
+
+                NotLoaded ->
+                    registrationForm form Nothing
+
+                Loaded _ ->
+                    registrationForm form Nothing
+    in
+    Element.column [ centerX, centerY, spacing 8, width (px 400), height (px 624), Background.color gray7 ]
+        [ viewTabHeaders "Register" [ ( "Sign In", "/sign-in" ), ( "Register", "/register" ) ]
+        , Element.column [ width fill, spacing 16, padding 8 ] contents
+        ]
+
+
+registrationForm : RegistrationForm -> Maybe String -> List (Element Msg)
+registrationForm form reason =
+    let
+        attrs =
+            [ Background.color errorBackgroundColor, Font.color errorTextColor, centerX, padding 8, width fill ]
+
+        failedMessage =
+            case reason of
+                Nothing ->
+                    el attrs (text "")
+
+                Just str ->
+                    el attrs (text ("Invalid email or password. " ++ str))
+    in
+    [ Input.email [ onEnter (SubmitRegistration form) ]
+        { onChange = FillInEmail
+        , text = form.email
+        , placeholder = Nothing
+        , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Email")
+        }
+    , Input.newPassword [ onEnter (SubmitRegistration form) ]
+        { onChange = FillInPassword
+        , text = form.password
+        , placeholder = Nothing
+        , show = False
+        , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Password")
+        }
+    , Input.text [ onEnter (SubmitRegistration form) ]
+        { onChange = FillInName
+        , text = form.name
+        , placeholder = Nothing
+        , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Your Name")
+        }
+    , Input.text [ onEnter (SubmitRegistration form) ]
+        { onChange = FillInGroupName
+        , text = form.groupName
+        , placeholder = Nothing
+        , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Group's Name")
+        }
+    , Input.text [ onEnter (SubmitRegistration form) ]
+        { onChange = FillInPhone
+        , text = form.phone
+        , placeholder = Nothing
+        , label = Input.labelAbove [ Element.alignLeft, Element.pointer ] (text "Phone")
+        }
+    , failedMessage
+    , Input.button [ centerX, onEnter (SubmitRegistration form) ]
+        { onPress = Just (SubmitRegistration form)
+        , label = el [ Background.color callToActionBackgroundColor, Font.color callToActionTextColor, padding 16 ] (text "Register Now")
+        }
+    ]
 
 
 viewSignIn : Nav.Key -> String -> String -> Request Token -> Element Msg
@@ -169,7 +330,7 @@ viewSignIn key email password tokenRequest =
                 Loaded _ ->
                     signInForm email password Nothing
     in
-    Element.column [ centerX, centerY, spacing 8, width (px 400), height (px 376), Background.color gray7 ]
+    Element.column [ centerX, centerY, spacing 8, width (px 400), height (px 368), Background.color gray7 ]
         [ viewTabHeaders "Sign In" [ ( "Sign In", "/sign-in" ), ( "Register", "/register" ) ]
         , Element.column [ width fill, spacing 16, padding 8 ] contents
         ]
@@ -178,13 +339,16 @@ viewSignIn key email password tokenRequest =
 signInForm : String -> String -> Maybe String -> List (Element Msg)
 signInForm email password reason =
     let
+        attrs =
+            [ Background.color errorBackgroundColor, Font.color errorTextColor, centerX, padding 8, width fill ]
+
         failedMessage =
             case reason of
                 Nothing ->
-                    el [] (text "")
+                    el attrs (text "")
 
                 Just str ->
-                    el [ Background.color errorBackgroundColor, Font.color errorTextColor, centerX, padding 8, width fill ] (text ("Invalid email or password. " ++ str))
+                    el attrs (text ("Invalid email or password. " ++ str))
     in
     [ Input.email [ onEnter (SubmitSignIn email password) ]
         { onChange = FillInEmail
@@ -222,7 +386,7 @@ viewTabHeader selected ( label, url ) =
             else
                 ( gray3, gray7 )
     in
-    Element.link [ width fill, padding 8, Background.color bg, Font.color fg ] { label = text label, url = url }
+    Element.link [ width fill, padding 16, Background.color bg, Font.color fg ] { label = text label, url = url }
 
 
 
@@ -240,11 +404,15 @@ subscriptions model =
 
 type Route
     = SignInPage
+    | RegistrationPage
 
 
 routeParser : Parser.Parser (Route -> a) a
 routeParser =
-    Parser.oneOf [ Parser.map SignInPage (Parser.s "sign-in") ]
+    Parser.oneOf
+        [ Parser.map SignInPage (Parser.s "sign-in")
+        , Parser.map RegistrationPage (Parser.s "register")
+        ]
 
 
 
@@ -280,8 +448,8 @@ signInEncoder email password =
         ]
 
 
-signInResponseDecoder : Decode.Decoder Token
-signInResponseDecoder =
+tokenDecoder : Decode.Decoder Token
+tokenDecoder =
     Decode.map Token (Decode.field "token" Decode.string)
 
 
@@ -290,7 +458,27 @@ submitSignIn email password =
     Http.post
         { url = "/api/rpc/sign_in"
         , body = Http.jsonBody (signInEncoder email password)
-        , expect = Http.expectJson SignInResponseReceived signInResponseDecoder
+        , expect = Http.expectJson SignInResponseReceived tokenDecoder
+        }
+
+
+registrationEncoder : RegistrationForm -> Encode.Value
+registrationEncoder form =
+    Encode.object
+        [ ( "email", Encode.string form.email )
+        , ( "password", Encode.string form.password )
+        , ( "name", Encode.string form.name )
+        , ( "group_name", Encode.string form.groupName )
+        , ( "phone", Encode.string form.phone )
+        ]
+
+
+submitRegistration : RegistrationForm -> Cmd Msg
+submitRegistration form =
+    Http.post
+        { url = "/api/rpc/register"
+        , body = Http.jsonBody (registrationEncoder form)
+        , expect = Http.expectJson RegistrationResponseReceived tokenDecoder
         }
 
 
