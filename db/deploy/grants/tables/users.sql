@@ -8,7 +8,7 @@ BEGIN;
   REVOKE ALL PRIVILEGES ON TABLE api.users FROM PUBLIC;
 
   GRANT
-      SELECT(email, password, name, phone, group_name, registered_at)
+      SELECT(email, password, name, phone, group_name, registered_at, slug)
     , INSERT(email, password, name, phone, group_name)
     , UPDATE(email, password, name, phone)
     , DELETE

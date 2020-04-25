@@ -17,7 +17,7 @@ import Json.Decode as Decode
 import Json.Encode as Encode
 import Url exposing (Url)
 import Url.Builder as Builder
-import Url.Parser as Parser
+import Url.Parser as Parser exposing ((</>))
 
 
 
@@ -57,14 +57,20 @@ type PartyKind
     | Troop
 
 
+type alias Slug =
+    String
+
+
 type alias Party =
-    { name : String
+    { slug : Slug
+    , name : String
     , kind : PartyKind
     }
 
 
 type alias User =
-    { name : String
+    { slug : Slug
+    , name : String
     , email : String
     , phone : String
     }
@@ -86,22 +92,25 @@ init flags url key =
             ( { key = key, token = Nothing, submodel = SignIn "" "" NotLoaded }, Cmd.none )
 
         ( _, Just SignInPage ) ->
-            ( { key = key, token = Nothing, submodel = SignIn "" "" NotLoaded }, Nav.replaceUrl key "/sign-in" )
+            ( { key = key, token = Nothing, submodel = SignIn "" "" NotLoaded }, Nav.replaceUrl key (routeBuilder SignInPage) )
 
         ( _, Just RegistrationPage ) ->
-            ( { key = key, token = Nothing, submodel = Register newRegistrationForm NotLoaded }, Nav.replaceUrl key "/register" )
+            ( { key = key, token = Nothing, submodel = Register newRegistrationForm NotLoaded }, Nav.replaceUrl key (routeBuilder RegistrationPage) )
 
         ( Nothing, _ ) ->
-            ( { key = key, token = Nothing, submodel = SignIn "" "" NotLoaded }, Nav.replaceUrl key "/sign-in" )
+            ( { key = key, token = Nothing, submodel = SignIn "" "" NotLoaded }, Nav.replaceUrl key (routeBuilder SignInPage) )
 
         ( Just token, Just DashboardPage ) ->
-            ( { key = key, token = Just (Token token), submodel = Dashboard }, Nav.replaceUrl key "/dashboard" )
+            ( { key = key, token = Just (Token token), submodel = Dashboard }, Nav.replaceUrl key (routeBuilder DashboardPage) )
 
         ( Just token, Just PartiesPage ) ->
-            ( { key = key, token = Just (Token token), submodel = Parties NotLoaded }, Nav.replaceUrl key "/parties" )
+            ( { key = key, token = Just (Token token), submodel = Parties NotLoaded }, Nav.replaceUrl key (routeBuilder PartiesPage) )
 
         ( Just token, Just UsersPage ) ->
-            ( { key = key, token = Just (Token token), submodel = Users NotLoaded }, Nav.replaceUrl key "/users" )
+            ( { key = key, token = Just (Token token), submodel = Users NotLoaded }, Nav.replaceUrl key (routeBuilder UsersPage) )
+
+        ( Just token, _ ) ->
+            ( { key = key, token = Just (Token token), submodel = Dashboard }, Nav.replaceUrl key (routeBuilder DashboardPage) )
 
 
 newRegistrationForm =
@@ -142,7 +151,7 @@ update msg model =
 
         ( SignInResponseReceived (Ok (Token token)), SignIn _ _ _ ) ->
             ( { model | submodel = Dashboard, token = Just (Token token) }
-            , Cmd.batch [ Nav.pushUrl model.key "/dashboard", manageJwtToken ( "set", token ) ]
+            , Cmd.batch [ Nav.pushUrl model.key (routeBuilder DashboardPage), manageJwtToken ( "set", token ) ]
             )
 
         ( SignInResponseReceived (Err err), SignIn email password _ ) ->
@@ -168,7 +177,7 @@ update msg model =
 
         ( RegistrationResponseReceived (Ok (Token token)), Register _ _ ) ->
             ( { model | submodel = Dashboard, token = Just (Token token) }
-            , Cmd.batch [ Nav.pushUrl model.key "/dashboard", manageJwtToken ( "set", token ) ]
+            , Cmd.batch [ Nav.pushUrl model.key (routeBuilder DashboardPage), manageJwtToken ( "set", token ) ]
             )
 
         ( RegistrationResponseReceived (Err err), Register form _ ) ->
@@ -214,6 +223,9 @@ update msg model =
                 Just UsersPage ->
                     ( { model | submodel = Users Loading }, getAllUsers model.token )
 
+                _ ->
+                    ( model, Cmd.none )
+
         _ ->
             ( model, Cmd.none )
 
@@ -241,7 +253,7 @@ viewNavbar : Model -> Element Msg
 viewNavbar model =
     let
         attrs =
-            [ Element.alignLeft, padding 4 ]
+            [ Element.alignLeft, padding 4 ] ++ linkStyles
 
         elems =
             case model.token of
@@ -249,14 +261,14 @@ viewNavbar model =
                     []
 
                 _ ->
-                    [ Element.link attrs { label = text "Dashboard", url = "/dashboard" }
-                    , Element.link attrs { label = text "Parties", url = "/parties" }
-                    , Element.link attrs { label = text "Users", url = "/users" }
-                    , Element.link [ Element.alignRight, padding 4 ] { label = text "Account", url = "/account" }
+                    [ Element.link attrs { label = text "Dashboard", url = routeBuilder DashboardPage }
+                    , Element.link attrs { label = text "Parties", url = routeBuilder PartiesPage }
+                    , Element.link attrs { label = text "Users", url = routeBuilder UsersPage }
+                    , Element.link ([ Element.alignRight, padding 4 ] ++ linkStyles) { label = text "Account", url = routeBuilder AccountPage }
                     ]
     in
     Element.row [ Region.navigation, width fill, height (px 48), outerPadding, Background.color gray7, Font.color gray2, spacing 16 ]
-        ([ Element.link attrs { label = text "SCOUTGES", url = "/" } ] ++ elems)
+        ([ Element.link attrs { label = text "SCOUTGES", url = routeBuilder RootPage } ] ++ elems)
 
 
 viewSubmodel : Model -> Element Msg
@@ -308,13 +320,33 @@ viewParties key partiesRequest =
             el [] (text "failed to load parties")
 
         Loaded list ->
-            Element.table [ Element.alignLeft, width (px 800) ]
+            Element.table tableStyles
                 { data = list
                 , columns =
-                    [ { header = el [ Font.bold ] (text "Name"), width = fill, view = \party -> el [] (text party.name) }
-                    , { header = el [ Font.bold ] (text "Kind"), width = fill, view = \party -> el [] (text (kindToString party.kind)) }
+                    [ { header = el tableHeaderStyles (text "Name"), width = fill, view = \party -> Element.link (tableCellStyles ++ linkStyles) { url = routeBuilder (EditPartyPage party.slug), label = text party.name } }
+                    , { header = el tableHeaderStyles (text "Kind"), width = fill, view = \party -> el tableCellStyles (text (kindToString party.kind)) }
                     ]
                 }
+
+
+linkStyles : List (Element.Attribute msg)
+linkStyles =
+    [ Font.underline, Element.pointer ]
+
+
+tableStyles : List (Element.Attribute msg)
+tableStyles =
+    [ width fill ]
+
+
+tableHeaderStyles : List (Element.Attribute msg)
+tableHeaderStyles =
+    [ width fill, Element.paddingXY 4 8, Background.color gray7, Font.color gray2, Font.bold, height (px 32) ]
+
+
+tableCellStyles : List (Element.Attribute msg)
+tableCellStyles =
+    [ width fill, Element.paddingXY 8 4, Background.color white, Font.color gray1, Element.alignLeft ]
 
 
 kindToString kind =
@@ -348,20 +380,30 @@ viewUsers key usersRequest =
             Element.table []
                 { data = list
                 , columns =
-                    [ { header = el [ width fill, padding 4, Background.color gray7, Font.color gray2, Font.bold, height (px 24) ] (text "Name")
+                    [ { header = el tableHeaderStyles (text "Name")
                       , width = fill
-                      , view = \user -> el [ padding 8 ] (text user.name)
+                      , view = \user -> Element.link (tableCellStyles ++ linkStyles) { label = text user.name, url = routeBuilder (EditUserPage user.slug) }
                       }
-                    , { header = el [ width fill, padding 4, Background.color gray7, Font.color gray2, Font.bold, height (px 24) ] (text "Email")
+                    , { header = el tableHeaderStyles (text "Email")
                       , width = fill
-                      , view = \user -> Element.link [ padding 8 ] { label = text user.email, url = "mailto:" ++ user.email }
+                      , view = \user -> Element.link (tableCellStyles ++ linkStyles) { label = text user.email, url = mailToUrl user.email }
                       }
-                    , { header = el [ width fill, padding 4, Background.color gray7, Font.color gray2, Font.bold, height (px 24) ] (text "Phone")
+                    , { header = el tableHeaderStyles (text "Phone")
                       , width = fill
-                      , view = \user -> el [ padding 8 ] (text user.phone)
+                      , view = \user -> Element.link (tableCellStyles ++ linkStyles) { label = text user.phone, url = phoneUrl user.phone }
                       }
                     ]
                 }
+
+
+mailToUrl : String -> String
+mailToUrl email =
+    "mailto:" ++ email
+
+
+phoneUrl : String -> String
+phoneUrl phone =
+    String.filter Char.isDigit phone
 
 
 viewRegistration : Nav.Key -> RegistrationForm -> Request Token -> Element Msg
@@ -394,7 +436,7 @@ viewRegistration key form requestToken =
                     registrationForm form Nothing
     in
     Element.column [ centerX, centerY, spacing 8, width (px 400), height (px 624), Background.color gray7 ]
-        [ viewTabHeaders "Register" [ ( "Sign In", "/sign-in" ), ( "Register", "/register" ) ]
+        [ viewTabHeaders "Register" [ ( "Sign In", routeBuilder SignInPage ), ( "Register", routeBuilder RegistrationPage ) ]
         , Element.column [ width fill, spacing 16, padding 8 ] contents
         ]
 
@@ -482,7 +524,7 @@ viewSignIn key email password tokenRequest =
                     signInForm email password Nothing
     in
     Element.column [ centerX, centerY, spacing 8, width (px 400), height (px 368), Background.color gray7 ]
-        [ viewTabHeaders "Sign In" [ ( "Sign In", "/sign-in" ), ( "Register", "/register" ) ]
+        [ viewTabHeaders "Sign In" [ ( "Sign In", routeBuilder SignInPage ), ( "Register", routeBuilder RegistrationPage ) ]
         , Element.column [ width fill, spacing 16, padding 8 ] contents
         ]
 
@@ -535,7 +577,7 @@ viewTabHeader selected ( label, url ) =
                 ( gray7, gray1 )
 
             else
-                ( gray3, gray7 )
+                ( gray3, gray8 )
     in
     Element.link [ width fill, padding 16, Background.color bg, Font.color fg ] { label = text label, url = url }
 
@@ -558,7 +600,11 @@ type Route
     | RegistrationPage
     | DashboardPage
     | PartiesPage
+    | EditPartyPage Slug
     | UsersPage
+    | EditUserPage Slug
+    | AccountPage
+    | RootPage
 
 
 routeParser : Parser.Parser (Route -> a) a
@@ -568,8 +614,43 @@ routeParser =
         , Parser.map RegistrationPage (Parser.s "register")
         , Parser.map DashboardPage (Parser.s "dashboard")
         , Parser.map PartiesPage (Parser.s "parties")
+        , Parser.map EditPartyPage (Parser.s "party" </> Parser.string </> Parser.s "edit")
         , Parser.map UsersPage (Parser.s "users")
+        , Parser.map EditUserPage (Parser.s "user" </> Parser.string </> Parser.s "edit")
+        , Parser.map AccountPage (Parser.s "account")
+        , Parser.map RootPage Parser.top
         ]
+
+
+routeBuilder : Route -> String
+routeBuilder route =
+    case route of
+        RootPage ->
+            Builder.absolute [] []
+
+        SignInPage ->
+            Builder.absolute [ "sign-in" ] []
+
+        RegistrationPage ->
+            Builder.absolute [ "register" ] []
+
+        AccountPage ->
+            Builder.absolute [ "account" ] []
+
+        DashboardPage ->
+            Builder.absolute [ "dashboard" ] []
+
+        PartiesPage ->
+            Builder.absolute [ "parties" ] []
+
+        EditPartyPage slug ->
+            Builder.absolute [ "party", slug, "edit" ] []
+
+        UsersPage ->
+            Builder.absolute [ "users" ] []
+
+        EditUserPage slug ->
+            Builder.absolute [ "user", slug, "edit" ] []
 
 
 
@@ -648,7 +729,8 @@ submitRegistration form =
 
 
 userDecoder =
-    Decode.map3 User
+    Decode.map4 User
+        (Decode.field "slug" Decode.string)
         (Decode.field "name" Decode.string)
         (Decode.field "email" Decode.string)
         (Decode.field "phone" Decode.string)
@@ -662,7 +744,7 @@ getAllUsers : Maybe Token -> Cmd Msg
 getAllUsers maybeToken =
     Http.request
         { method = "GET"
-        , url = "/api/users?select=name,email,phone"
+        , url = "/api/users?select=name,email,phone,slug"
         , body = Http.emptyBody
         , expect = Http.expectJson UsersLoaded usersDecoder
         , headers = buildHeaders maybeToken
@@ -694,7 +776,8 @@ partyKindDecoder =
 
 
 partyDecoder =
-    Decode.map2 Party
+    Decode.map3 Party
+        (Decode.field "slug" Decode.string)
         (Decode.field "name" Decode.string)
         (Decode.field "kind" partyKindDecoder)
 
@@ -707,7 +790,7 @@ getAllParties : Maybe Token -> Cmd Msg
 getAllParties maybeToken =
     Http.request
         { method = "GET"
-        , url = "/api/parties?select=name,kind"
+        , url = "/api/parties?select=name,kind,slug"
         , body = Http.emptyBody
         , expect = Http.expectJson PartiesLoaded partiesDecoder
         , headers = buildHeaders maybeToken

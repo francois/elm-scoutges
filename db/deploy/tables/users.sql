@@ -6,6 +6,7 @@ BEGIN;
 
   CREATE TABLE api.users(
       id serial not null unique
+    , slug text not null unique default public.generate_serial_nos(8)
     , email text not null check(email ~ '^.+@.+[.][a-z]{2,}$') primary key
     , password text not null
     , name text not null
