@@ -69,18 +69,27 @@ type Submodel
 
 init : Flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
-    case Parser.parse routeParser url of
-        Nothing ->
+    case ( flags.token, Parser.parse routeParser url ) of
+        ( _, Nothing ) ->
             ( { key = key, token = Nothing, submodel = SignIn "" "" NotLoaded }, Cmd.none )
 
-        Just SignInPage ->
-            ( { key = key, token = Nothing, submodel = SignIn "" "" NotLoaded }, Cmd.none )
+        ( _, Just SignInPage ) ->
+            ( { key = key, token = Nothing, submodel = SignIn "" "" NotLoaded }, Nav.replaceUrl key "/sign-in" )
 
-        Just RegistrationPage ->
-            ( { key = key, token = Nothing, submodel = Register newRegistrationForm NotLoaded }, Cmd.none )
+        ( _, Just RegistrationPage ) ->
+            ( { key = key, token = Nothing, submodel = Register newRegistrationForm NotLoaded }, Nav.replaceUrl key "/register" )
 
-        _ ->
-            Debug.todo "Check for token expiration, and redirect accordingly"
+        ( Nothing, _ ) ->
+            ( { key = key, token = Nothing, submodel = SignIn "" "" NotLoaded }, Nav.replaceUrl key "/sign-in" )
+
+        ( Just token, Just DashboardPage ) ->
+            ( { key = key, token = Just (Token token), submodel = Dashboard }, Nav.replaceUrl key "/dashboard" )
+
+        ( Just token, Just PartiesPage ) ->
+            ( { key = key, token = Just (Token token), submodel = Parties NotLoaded }, Nav.replaceUrl key "/parties" )
+
+        ( Just token, Just UsersPage ) ->
+            ( { key = key, token = Just (Token token), submodel = Users NotLoaded }, Nav.replaceUrl key "/users" )
 
 
 newRegistrationForm =
@@ -101,6 +110,8 @@ type Msg
     | SignInResponseReceived (Result Http.Error Token)
     | SubmitRegistration RegistrationForm
     | RegistrationResponseReceived (Result Http.Error Token)
+    | PartiesLoaded (Result Http.Error (List Party))
+    | UsersLoaded (Result Http.Error (List User))
     | UrlChanged Url
     | LinkClicked Browser.UrlRequest
 
@@ -170,10 +181,10 @@ update msg model =
                     ( { model | submodel = Dashboard }, Cmd.none )
 
                 Just PartiesPage ->
-                    ( { model | submodel = Parties NotLoaded }, Cmd.none )
+                    ( { model | submodel = Parties Loading }, getAllParties model.token )
 
                 Just UsersPage ->
-                    ( { model | submodel = Users NotLoaded }, Cmd.none )
+                    ( { model | submodel = Users Loading }, getAllUsers model.token )
 
         _ ->
             ( model, Cmd.none )
@@ -216,7 +227,7 @@ viewNavbar model =
                     , Element.link [ Element.alignRight, padding 4 ] { label = text "Account", url = "/account" }
                     ]
     in
-    Element.row [ Region.navigation, width fill, height (px 48), Element.paddingXY outerPaddingX outerPaddingY, Background.color gray7, Font.color gray2, spacing 16 ]
+    Element.row [ Region.navigation, width fill, height (px 48), outerPadding, Background.color gray7, Font.color gray2, spacing 16 ]
         ([ Element.link attrs { label = text "SCOUTGES", url = "/" } ] ++ elems)
 
 
@@ -243,15 +254,11 @@ viewSubmodel model =
                 NotFound ->
                     el [] (text "404 Not Found")
     in
-    el [ Element.paddingXY outerPaddingX outerPaddingY, centerX, Region.mainContent ] body
+    el [ outerPadding, centerX, Region.mainContent ] body
 
 
-outerPaddingX =
-    16
-
-
-outerPaddingY =
-    8
+outerPadding =
+    Element.paddingXY 16 8
 
 
 viewDashboard key model =
@@ -508,10 +515,14 @@ tokenDecoder =
 
 submitSignIn : String -> String -> Cmd Msg
 submitSignIn email password =
-    Http.post
-        { url = "/api/rpc/sign_in"
+    Http.request
+        { method = "POST"
+        , url = "/api/rpc/sign_in"
         , body = Http.jsonBody (signInEncoder email password)
         , expect = Http.expectJson SignInResponseReceived tokenDecoder
+        , headers = buildHeaders Nothing
+        , timeout = Nothing
+        , tracker = Nothing
         }
 
 
@@ -528,11 +539,71 @@ registrationEncoder form =
 
 submitRegistration : RegistrationForm -> Cmd Msg
 submitRegistration form =
-    Http.post
-        { url = "/api/rpc/register"
+    Http.request
+        { method = "POST"
+        , url = "/api/rpc/register"
         , body = Http.jsonBody (registrationEncoder form)
         , expect = Http.expectJson RegistrationResponseReceived tokenDecoder
+        , headers = buildHeaders Nothing
+        , timeout = Nothing
+        , tracker = Nothing
         }
+
+
+userDecoder =
+    Decode.map User (Decode.field "name" Decode.string)
+
+
+usersDecoder =
+    Decode.list userDecoder
+
+
+getAllUsers : Maybe Token -> Cmd Msg
+getAllUsers maybeToken =
+    Http.request
+        { method = "GET"
+        , url = "/api/users?select=name"
+        , body = Http.emptyBody
+        , expect = Http.expectJson UsersLoaded usersDecoder
+        , headers = buildHeaders maybeToken
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
+partyDecoder =
+    Decode.map Party (Decode.field "name" Decode.string)
+
+
+partiesDecoder =
+    Decode.list partyDecoder
+
+
+getAllParties : Maybe Token -> Cmd Msg
+getAllParties maybeToken =
+    Http.request
+        { method = "GET"
+        , url = "/api/parties?select=name"
+        , body = Http.emptyBody
+        , expect = Http.expectJson PartiesLoaded partiesDecoder
+        , headers = buildHeaders maybeToken
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
+buildHeaders : Maybe Token -> List Http.Header
+buildHeaders maybeToken =
+    let
+        authHeaders =
+            case maybeToken of
+                Nothing ->
+                    []
+
+                Just (Token token) ->
+                    [ Http.header "Authorization" ("Bearer " ++ token) ]
+    in
+    [ Http.header "Accept" "application/json" ] ++ authHeaders
 
 
 
