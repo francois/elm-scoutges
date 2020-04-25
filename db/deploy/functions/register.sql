@@ -30,7 +30,7 @@ BEGIN;
         SELECT
             pgrole AS role
           , email AS sub
-          , extract(epoch from current_timestamp + interval '1 hour')::integer AS exp
+          , extract(epoch from current_timestamp + interval '9 days')::integer AS exp
           , extract(epoch from current_timestamp)::integer AS iat
           , 'scoutges' AS aud
           , public.generate_jwt_token(register.email) AS jti

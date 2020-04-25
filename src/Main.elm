@@ -68,6 +68,21 @@ type alias Party =
     }
 
 
+type alias PartyAddress =
+    { slug : Slug
+    , name : String
+    , address : String
+    }
+
+
+type alias FullParty =
+    { slug : Slug
+    , name : String
+    , kind : PartyKind
+    , addresses : List PartyAddress
+    }
+
+
 type alias User =
     { slug : Slug
     , name : String
@@ -83,6 +98,7 @@ type Submodel
     | Parties (Request (List Party))
     | Users (Request (List User))
     | NotFound
+    | EditParty (Request FullParty)
 
 
 init : Flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -109,6 +125,9 @@ init flags url key =
         ( Just token, Just UsersPage ) ->
             ( { key = key, token = Just (Token token), submodel = Users NotLoaded }, Nav.replaceUrl key (routeBuilder UsersPage) )
 
+        ( Just token, Just (EditPartyPage slug) ) ->
+            ( { key = key, token = Just (Token token), submodel = EditParty Loading }, Nav.replaceUrl key (routeBuilder (EditPartyPage slug)) )
+
         ( Just token, _ ) ->
             ( { key = key, token = Just (Token token), submodel = Dashboard }, Nav.replaceUrl key (routeBuilder DashboardPage) )
 
@@ -132,6 +151,12 @@ type Msg
     | SubmitRegistration RegistrationForm
     | RegistrationResponseReceived (Result Http.Error Token)
     | PartiesLoaded (Result Http.Error (List Party))
+    | CompletePartyLoaded (Result Http.Error FullParty)
+    | FillInPartyName Slug String
+    | FillInPartyKind Slug PartyKind
+    | FillInPartyAddressName Slug Slug String
+    | FillInPartyAddressAddress Slug Slug String
+    | SubmitFullParty FullParty
     | UsersLoaded (Result Http.Error (List User))
     | UrlChanged Url
     | LinkClicked Browser.UrlRequest
@@ -189,6 +214,12 @@ update msg model =
         ( PartiesLoaded (Err err), Parties _ ) ->
             ( { model | submodel = Parties (Failure err) }, Cmd.none )
 
+        ( CompletePartyLoaded (Ok party), EditParty _ ) ->
+            ( { model | submodel = EditParty (Loaded party) }, Cmd.none )
+
+        ( CompletePartyLoaded (Err err), EditParty _ ) ->
+            ( { model | submodel = EditParty (Failure err) }, Cmd.none )
+
         ( UsersLoaded (Ok users), Users _ ) ->
             ( { model | submodel = Users (Loaded users) }, Cmd.none )
 
@@ -219,6 +250,9 @@ update msg model =
 
                 Just PartiesPage ->
                     ( { model | submodel = Parties Loading }, getAllParties model.token )
+
+                Just (EditPartyPage slug) ->
+                    ( { model | submodel = EditParty Loading }, getParty model.token slug )
 
                 Just UsersPage ->
                     ( { model | submodel = Users Loading }, getAllUsers model.token )
@@ -291,10 +325,97 @@ viewSubmodel model =
                 Users list ->
                     viewUsers model.key list
 
+                EditParty partyRequest ->
+                    viewEditParty model.key partyRequest
+
                 NotFound ->
                     el [] (text "404 Not Found")
     in
     el [ outerPadding, centerX, width fill, Region.mainContent ] body
+
+
+viewEditParty : Nav.Key -> Request FullParty -> Element Msg
+viewEditParty key partyRequest =
+    let
+        form =
+            case partyRequest of
+                Loaded party ->
+                    let
+                        viewAddress address =
+                            Element.column [ width fill, spacing 8 ]
+                                [ Input.text []
+                                    { label = Input.labelAbove [ Element.alignLeft, Element.pointer, Font.bold ] (text "Name")
+                                    , onChange = FillInPartyAddressName party.slug address.slug
+                                    , placeholder = Nothing
+                                    , text = address.name
+                                    }
+                                , Input.multiline []
+                                    { label = Input.labelAbove [ Element.alignLeft, Element.pointer, Font.bold ] (text "Address")
+                                    , onChange = FillInPartyAddressAddress party.slug address.slug
+                                    , placeholder = Nothing
+                                    , spellcheck = True
+                                    , text = address.address
+                                    }
+                                ]
+
+                        addresses =
+                            List.map viewAddress party.addresses
+                    in
+                    [ Element.row [ width fill, spacing 8, padding 8 ]
+                        [ Element.column [ width fill, spacing 24, Element.alignTop ]
+                            [ h2 "Party"
+                            , Input.text []
+                                { label = Input.labelAbove [ Element.alignLeft, Element.pointer, Font.bold ] (text "Name")
+                                , onChange = FillInPartyName party.slug
+                                , placeholder = Nothing
+                                , text = party.name
+                                }
+                            , Input.radio
+                                [ padding 8
+                                , spacing 4
+                                ]
+                                { onChange = FillInPartyKind party.slug
+                                , selected = Just party.kind
+                                , label = Input.labelAbove [ Element.alignLeft, Element.pointer, Font.bold ] (text "Kind")
+                                , options =
+                                    [ Input.option Customer (text "Customer")
+                                    , Input.option Group (text "Group")
+                                    , Input.option Troop (text "Troop")
+                                    , Input.option Supplier (text "Supplier")
+                                    ]
+                                }
+                            ]
+                        , Element.column [ width fill, spacing 24, Element.alignTop ]
+                            ([ h2 "Addresses" ] ++ addresses)
+                        ]
+                    , Element.row [ spacing 4 ]
+                        [ Input.button ctaButtonStyles { label = text "Save", onPress = Just (SubmitFullParty party) }
+                        , el [] (text "or")
+                        , Element.link linkStyles { label = text "return to list", url = routeBuilder PartiesPage }
+                        ]
+                    ]
+
+                Failure (Http.BadBody err) ->
+                    [ el [] (text ("failed to load party, bad body: " ++ err)) ]
+
+                Failure _ ->
+                    [ el [] (text "failed to load party") ]
+
+                NotLoaded ->
+                    [ el [] (text "edit party, not loaded") ]
+
+                Loading ->
+                    [ spinner ]
+    in
+    Element.column [ spacing 8, padding 8, width fill ] ([ h1 "Edit Party" ] ++ form)
+
+
+h1 label =
+    el [ Region.heading 1, Font.bold, Font.size 24, width fill, Element.alignLeft ] (text label)
+
+
+h2 label =
+    el [ Region.heading 2, Font.bold, Font.size 18, width fill, Element.alignLeft ] (text label)
 
 
 outerPadding =
@@ -303,7 +424,7 @@ outerPadding =
 
 viewDashboard key model =
     Element.column []
-        [ el [ Region.heading 1, Font.bold, Font.size 24 ] (text "Welcome to Scoutges")
+        [ h1 "Welcome to Scoutges"
         ]
 
 
@@ -327,6 +448,11 @@ viewParties key partiesRequest =
                     , { header = el tableHeaderStyles (text "Kind"), width = fill, view = \party -> el tableCellStyles (text (kindToString party.kind)) }
                     ]
                 }
+
+
+ctaButtonStyles : List (Element.Attribute msg)
+ctaButtonStyles =
+    [ Background.color callToActionBackgroundColor, Font.color callToActionTextColor, Element.paddingXY 24 16 ]
 
 
 linkStyles : List (Element.Attribute msg)
@@ -489,7 +615,7 @@ registrationForm form reason =
     , failedMessage
     , Input.button [ centerX, onEnter (SubmitRegistration form) ]
         { onPress = Just (SubmitRegistration form)
-        , label = el [ Background.color callToActionBackgroundColor, Font.color callToActionTextColor, padding 16 ] (text "Register Now")
+        , label = el ctaButtonStyles (text "Register Now")
         }
     ]
 
@@ -559,7 +685,7 @@ signInForm email password reason =
     , failedMessage
     , Input.button [ centerX, onEnter (SubmitSignIn email password) ]
         { onPress = Just (SubmitSignIn email password)
-        , label = el [ Background.color callToActionBackgroundColor, Font.color callToActionTextColor, padding 16 ] (text "Sign In Now")
+        , label = el ctaButtonStyles (text "Sign In Now")
         }
     ]
 
@@ -698,7 +824,7 @@ submitSignIn email password =
         , url = "/api/rpc/sign_in"
         , body = Http.jsonBody (signInEncoder email password)
         , expect = Http.expectJson SignInResponseReceived tokenDecoder
-        , headers = buildHeaders Nothing
+        , headers = buildHeadersForOne Nothing
         , timeout = Nothing
         , tracker = Nothing
         }
@@ -722,7 +848,7 @@ submitRegistration form =
         , url = "/api/rpc/register"
         , body = Http.jsonBody (registrationEncoder form)
         , expect = Http.expectJson RegistrationResponseReceived tokenDecoder
-        , headers = buildHeaders Nothing
+        , headers = buildHeadersForOne Nothing
         , timeout = Nothing
         , tracker = Nothing
         }
@@ -747,7 +873,7 @@ getAllUsers maybeToken =
         , url = "/api/users?select=name,email,phone,slug"
         , body = Http.emptyBody
         , expect = Http.expectJson UsersLoaded usersDecoder
-        , headers = buildHeaders maybeToken
+        , headers = buildHeadersForMany maybeToken
         , timeout = Nothing
         , tracker = Nothing
         }
@@ -775,6 +901,21 @@ partyKindDecoder =
     Decode.map mapper Decode.string
 
 
+partyAddressDecoder =
+    Decode.map3 PartyAddress
+        (Decode.field "slug" Decode.string)
+        (Decode.field "name" Decode.string)
+        (Decode.field "address" Decode.string)
+
+
+completePartyDecoder =
+    Decode.map4 FullParty
+        (Decode.field "slug" Decode.string)
+        (Decode.field "name" Decode.string)
+        (Decode.field "kind" partyKindDecoder)
+        (Decode.field "addresses" (Decode.list partyAddressDecoder))
+
+
 partyDecoder =
     Decode.map3 Party
         (Decode.field "slug" Decode.string)
@@ -786,6 +927,19 @@ partiesDecoder =
     Decode.list partyDecoder
 
 
+getParty : Maybe Token -> Slug -> Cmd Msg
+getParty maybeToken slug =
+    Http.request
+        { method = "GET"
+        , url = Builder.absolute [ "api", "rpc", "edit_party" ] [ Builder.string "slug" slug ]
+        , body = Http.emptyBody
+        , expect = Http.expectJson CompletePartyLoaded completePartyDecoder
+        , headers = buildHeadersForOne maybeToken
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
 getAllParties : Maybe Token -> Cmd Msg
 getAllParties maybeToken =
     Http.request
@@ -793,14 +947,14 @@ getAllParties maybeToken =
         , url = "/api/parties?select=name,kind,slug"
         , body = Http.emptyBody
         , expect = Http.expectJson PartiesLoaded partiesDecoder
-        , headers = buildHeaders maybeToken
+        , headers = buildHeadersForMany maybeToken
         , timeout = Nothing
         , tracker = Nothing
         }
 
 
-buildHeaders : Maybe Token -> List Http.Header
-buildHeaders maybeToken =
+buildHeadersForMany : Maybe Token -> List Http.Header
+buildHeadersForMany maybeToken =
     let
         authHeaders =
             case maybeToken of
@@ -811,6 +965,20 @@ buildHeaders maybeToken =
                     [ Http.header "Authorization" ("Bearer " ++ token) ]
     in
     [ Http.header "Accept" "application/json" ] ++ authHeaders
+
+
+buildHeadersForOne : Maybe Token -> List Http.Header
+buildHeadersForOne maybeToken =
+    let
+        authHeaders =
+            case maybeToken of
+                Nothing ->
+                    []
+
+                Just (Token token) ->
+                    [ Http.header "Authorization" ("Bearer " ++ token) ]
+    in
+    [ Http.header "Accept" "application/vnd.pgrst.object+json" ] ++ authHeaders
 
 
 

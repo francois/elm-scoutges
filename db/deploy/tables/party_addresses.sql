@@ -8,6 +8,7 @@ BEGIN;
   CREATE TABLE api.party_addresses(
       id serial not null unique
     , party_slug text not null references api.parties(slug) on update cascade on delete cascade
+    , slug text not null unique default public.generate_serial_nos(10)
     , name text not null check(length(trim(name)) > 0)
     , address text not null check(length(trim(name)) > 0)
     , created_at timestamp with time zone not null default current_timestamp
