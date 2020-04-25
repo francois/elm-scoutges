@@ -50,11 +50,21 @@ type alias RegistrationForm =
     { email : String, password : String, name : String, groupName : String, phone : String }
 
 
+type alias Party =
+    { name : String }
+
+
+type alias User =
+    { name : String }
+
+
 type Submodel
     = SignIn String String (Request Token)
     | Register RegistrationForm (Request Token)
     | Dashboard
-    | NotFound Token
+    | Parties (Request (List Party))
+    | Users (Request (List User))
+    | NotFound
 
 
 init : Flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -68,6 +78,9 @@ init flags url key =
 
         Just RegistrationPage ->
             ( { key = key, token = Nothing, submodel = Register newRegistrationForm NotLoaded }, Cmd.none )
+
+        _ ->
+            Debug.todo "Check for token expiration, and redirect accordingly"
 
 
 newRegistrationForm =
@@ -134,6 +147,34 @@ update msg model =
         ( RegistrationResponseReceived (Err err), Register form _ ) ->
             ( { model | submodel = Register form (Failure err) }, Cmd.none )
 
+        ( LinkClicked target, _ ) ->
+            case target of
+                Browser.Internal url ->
+                    ( model, Nav.pushUrl model.key (Url.toString url) )
+
+                Browser.External href ->
+                    ( model, Nav.load href )
+
+        ( UrlChanged url, _ ) ->
+            case Parser.parse routeParser url of
+                Nothing ->
+                    ( { model | submodel = NotFound }, Cmd.none )
+
+                Just SignInPage ->
+                    ( { model | token = Nothing, submodel = SignIn "" "" NotLoaded }, Cmd.none )
+
+                Just RegistrationPage ->
+                    ( { model | token = Nothing, submodel = Register newRegistrationForm NotLoaded }, Cmd.none )
+
+                Just DashboardPage ->
+                    ( { model | submodel = Dashboard }, Cmd.none )
+
+                Just PartiesPage ->
+                    ( { model | submodel = Parties NotLoaded }, Cmd.none )
+
+                Just UsersPage ->
+                    ( { model | submodel = Users NotLoaded }, Cmd.none )
+
         _ ->
             ( model, Cmd.none )
 
@@ -193,8 +234,14 @@ viewSubmodel model =
                 Dashboard ->
                     viewDashboard model.key model.submodel
 
-                _ ->
-                    el [] (text "not handled yet")
+                Users _ ->
+                    el [] (text "Users not handled yet")
+
+                Parties _ ->
+                    el [] (text "Parties not handled yet")
+
+                NotFound ->
+                    el [] (text "404 Not Found")
     in
     el [ Element.paddingXY outerPaddingX outerPaddingY, centerX, Region.mainContent ] body
 
@@ -209,7 +256,7 @@ outerPaddingY =
 
 viewDashboard key model =
     Element.column []
-        [ el [ Region.heading 1, Font.size 24 ] (text "Welcome to Scoutges")
+        [ el [ Region.heading 1, Font.bold, Font.size 24 ] (text "Welcome to Scoutges")
         ]
 
 
@@ -405,6 +452,9 @@ subscriptions model =
 type Route
     = SignInPage
     | RegistrationPage
+    | DashboardPage
+    | PartiesPage
+    | UsersPage
 
 
 routeParser : Parser.Parser (Route -> a) a
@@ -412,6 +462,9 @@ routeParser =
     Parser.oneOf
         [ Parser.map SignInPage (Parser.s "sign-in")
         , Parser.map RegistrationPage (Parser.s "register")
+        , Parser.map DashboardPage (Parser.s "dashboard")
+        , Parser.map PartiesPage (Parser.s "parties")
+        , Parser.map UsersPage (Parser.s "users")
         ]
 
 
