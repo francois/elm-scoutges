@@ -1,4 +1,4 @@
-module Main exposing (main)
+port module Main exposing (main)
 
 import Base64
 import Browser
@@ -128,8 +128,10 @@ update msg model =
         ( SubmitSignIn email password, SignIn _ _ _ ) ->
             ( { model | submodel = SignIn email password Loading }, submitSignIn email password )
 
-        ( SignInResponseReceived (Ok token), SignIn _ _ _ ) ->
-            ( { model | submodel = Dashboard, token = Just token }, Nav.pushUrl model.key "/dashboard" )
+        ( SignInResponseReceived (Ok (Token token)), SignIn _ _ _ ) ->
+            ( { model | submodel = Dashboard, token = Just (Token token) }
+            , Cmd.batch [ Nav.pushUrl model.key "/dashboard", manageJwtToken ( "set", token ) ]
+            )
 
         ( SignInResponseReceived (Err err), SignIn email password _ ) ->
             ( { model | submodel = SignIn email password (Failure err) }, Cmd.none )
@@ -152,8 +154,10 @@ update msg model =
         ( SubmitRegistration form, Register _ _ ) ->
             ( { model | submodel = Register form Loading }, submitRegistration form )
 
-        ( RegistrationResponseReceived (Ok token), Register _ _ ) ->
-            ( { model | submodel = Dashboard, token = Just token }, Nav.pushUrl model.key "/dashboard" )
+        ( RegistrationResponseReceived (Ok (Token token)), Register _ _ ) ->
+            ( { model | submodel = Dashboard, token = Just (Token token) }
+            , Cmd.batch [ Nav.pushUrl model.key "/dashboard", manageJwtToken ( "set", token ) ]
+            )
 
         ( RegistrationResponseReceived (Err err), Register form _ ) ->
             ( { model | submodel = Register form (Failure err) }, Cmd.none )
@@ -648,6 +652,13 @@ buildHeaders maybeToken =
                     [ Http.header "Authorization" ("Bearer " ++ token) ]
     in
     [ Http.header "Accept" "application/json" ] ++ authHeaders
+
+
+
+---- PORTS ----
+
+
+port manageJwtToken : ( String, String ) -> Cmd msg
 
 
 
