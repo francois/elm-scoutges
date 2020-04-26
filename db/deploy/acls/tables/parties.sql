@@ -8,7 +8,7 @@ BEGIN;
   REVOKE ALL PRIVILEGES ON api.parties FROM PUBLIC;
 
   GRANT SELECT(slug, name, kind, created_at, updated_at)
-    , INSERT(name, kind)
+    , INSERT(name, kind, pgrole)
     , UPDATE(name, kind)
     , DELETE
   ON TABLE api.parties

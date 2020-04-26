@@ -1002,6 +1002,7 @@ fullPartyEncoder party =
     Encode.object
         [ ( "name", Encode.string party.name )
         , ( "kind", partyKindEncoder party.kind )
+        , ( "slug", Encode.string party.slug )
         ]
 
 
@@ -1012,7 +1013,7 @@ saveFullParty maybeToken fullParty =
         , url = "/api/rpc/save_full_party"
         , body = Http.jsonBody (fullPartyEncoder fullParty)
         , expect = Http.expectWhatever FullPartySaved
-        , headers = buildHeadersForOne maybeToken
+        , headers = buildHeadersForOne maybeToken ++ [ Http.header "Prefer" "params=single-object" ]
         , timeout = Nothing
         , tracker = Nothing
         }

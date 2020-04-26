@@ -39,3 +39,4 @@ acls/tables/parties [tables/parties] 2020-04-19T21:40:34Z François Beausoleil <
 acls/tables/party_addresses [tables/party_addresses] 2020-04-19T21:56:05Z François Beausoleil <francois@teksol.info> # Grants and policies for the party_addresses table
 acls/tables/orders [tables/orders] 2020-04-19T22:00:30Z François Beausoleil <francois@teksol.info> # Grants and policies for the orders table
 functions/edit_party [tables/parties tables/party_addresses] 2020-04-25T14:53:52Z François Beausoleil <francois@teksol.info> # Function to retrieve everything required to edit a party
+functions/save_full_party [tables/parties tables/party_addresses] 2020-04-26T03:01:30Z François Beausoleil <francois@teksol.info> # A function that writes a party with addresses to the DB
