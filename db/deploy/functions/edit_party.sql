@@ -6,14 +6,20 @@ SET client_min_messages TO 'warning';
 
 BEGIN;
 
+  CREATE TYPE public.simple_address AS (name text, address text);
+
   CREATE OR REPLACE FUNCTION api.edit_party(slug text) RETURNS json AS $$
     SELECT row_to_json(r)
     FROM (
-      SELECT parties.slug, parties.name, parties.kind, case when pa.slug is null then array[]::json[] else array_agg(row_to_json(pa)) end addresses
+      SELECT slug, parties.name, parties.kind, parties.created_at, parties.updated_at
+        , case
+          when pa.slug is null then array[]::json[]
+          else                      array_agg(row_to_json(row(pa.name, pa.address)::simple_address))
+          end addresses
       FROM api.parties
-      LEFT JOIN (SELECT party_slug slug, name, address FROM api.party_addresses) pa USING(slug)
+      FULL OUTER JOIN (SELECT party_slug slug, name, address FROM api.party_addresses WHERE party_slug = edit_party.slug) pa USING (slug)
       WHERE parties.slug = edit_party.slug
-      GROUP BY slug, pa.slug) r
+      GROUP BY parties.slug, pa.slug) r;
   $$ LANGUAGE sql STABLE;
 
 COMMIT;

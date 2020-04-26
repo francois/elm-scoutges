@@ -7,7 +7,7 @@ BEGIN;
 
   REVOKE ALL PRIVILEGES ON api.party_addresses FROM PUBLIC;
 
-  GRANT SELECT(party_slug, slug, name, address, created_at, updated_at)
+  GRANT SELECT(party_slug, name, address, created_at, updated_at)
     , INSERT(party_slug, name, address, pgrole)
     , UPDATE(name, address)
     , DELETE

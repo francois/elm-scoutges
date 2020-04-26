@@ -65,6 +65,7 @@ type alias Party =
     { slug : Slug
     , name : String
     , kind : PartyKind
+    , addresses : List PartyAddress
     }
 
 
@@ -72,14 +73,6 @@ type alias PartyAddress =
     { slug : Slug
     , name : String
     , address : String
-    }
-
-
-type alias FullParty =
-    { slug : Slug
-    , name : String
-    , kind : PartyKind
-    , addresses : List PartyAddress
     }
 
 
@@ -98,7 +91,7 @@ type Submodel
     | Parties (Request (List Party))
     | Users (Request (List User))
     | NotFound
-    | EditParty (Request FullParty)
+    | EditParty (Request Party)
 
 
 init : Flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -151,13 +144,13 @@ type Msg
     | SubmitRegistration RegistrationForm
     | RegistrationResponseReceived (Result Http.Error Token)
     | PartiesLoaded (Result Http.Error (List Party))
-    | FullPartyLoaded (Result Http.Error FullParty)
+    | PartyLoaded (Result Http.Error Party)
     | FillInPartyName Slug String
     | FillInPartyKind Slug PartyKind
     | FillInPartyAddressName Slug Slug String
     | FillInPartyAddressAddress Slug Slug String
-    | SaveFullParty FullParty
-    | FullPartySaved (Result Http.Error ())
+    | SaveParty Party
+    | PartySaved (Result Http.Error ())
     | UsersLoaded (Result Http.Error (List User))
     | UrlChanged Url
     | LinkClicked Browser.UrlRequest
@@ -215,26 +208,26 @@ update msg model =
         ( PartiesLoaded (Err err), Parties _ ) ->
             ( { model | submodel = Parties (Failure err) }, Cmd.none )
 
-        ( FullPartyLoaded (Ok party), EditParty _ ) ->
+        ( PartyLoaded (Ok party), EditParty _ ) ->
             ( { model | submodel = EditParty (Loaded party) }, Cmd.none )
 
-        ( FullPartyLoaded (Err err), EditParty _ ) ->
+        ( PartyLoaded (Err err), EditParty _ ) ->
             ( { model | submodel = EditParty (Failure err) }, Cmd.none )
 
-        ( FillInPartyName _ name, EditParty (Loaded fullParty) ) ->
-            ( { model | submodel = EditParty (Loaded { fullParty | name = name }) }, Cmd.none )
+        ( FillInPartyName _ name, EditParty (Loaded party) ) ->
+            ( { model | submodel = EditParty (Loaded { party | name = name }) }, Cmd.none )
 
-        ( FillInPartyKind slug kind, EditParty fullParty ) ->
+        ( FillInPartyKind slug kind, EditParty party ) ->
             ( model, Cmd.none )
 
-        ( FillInPartyAddressName partySlug addressSlug name, EditParty fullParty ) ->
+        ( FillInPartyAddressName partySlug addressSlug name, EditParty party ) ->
             ( model, Cmd.none )
 
-        ( FillInPartyAddressAddress partySlug addressSlug address, EditParty fullParty ) ->
+        ( FillInPartyAddressAddress partySlug addressSlug address, EditParty party ) ->
             ( model, Cmd.none )
 
-        ( SaveFullParty fullParty, EditParty (Loaded _) ) ->
-            ( { model | submodel = EditParty Loading }, saveFullParty model.token fullParty )
+        ( SaveParty party, EditParty (Loaded _) ) ->
+            ( { model | submodel = EditParty Loading }, saveParty model.token party )
 
         ( UsersLoaded (Ok users), Users _ ) ->
             ( { model | submodel = Users (Loaded users) }, Cmd.none )
@@ -350,7 +343,7 @@ viewSubmodel model =
     el [ outerPadding, centerX, width fill, Region.mainContent ] body
 
 
-viewEditParty : Nav.Key -> Request FullParty -> Element Msg
+viewEditParty : Nav.Key -> Request Party -> Element Msg
 viewEditParty key partyRequest =
     let
         form =
@@ -405,7 +398,7 @@ viewEditParty key partyRequest =
                             ([ h2 "Addresses" ] ++ addresses)
                         ]
                     , Element.row [ spacing 4 ]
-                        [ Input.button ctaButtonStyles { label = text "Save", onPress = Just (SaveFullParty party) }
+                        [ Input.button ctaButtonStyles { label = text "Save", onPress = Just (SaveParty party) }
                         , el [] (text "or")
                         , Element.link linkStyles { label = text "return to list", url = routeBuilder PartiesPage }
                         ]
@@ -932,19 +925,22 @@ partyAddressesDecoder =
         ]
 
 
-completePartyDecoder =
-    Decode.map4 FullParty
-        (Decode.field "slug" Decode.string)
-        (Decode.field "name" Decode.string)
-        (Decode.field "kind" partyKindDecoder)
-        (Decode.field "addresses" partyAddressesDecoder)
-
-
 partyDecoder =
-    Decode.map3 Party
+    Decode.map4 Party
         (Decode.field "slug" Decode.string)
         (Decode.field "name" Decode.string)
         (Decode.field "kind" partyKindDecoder)
+        (Decode.maybe (Decode.field "addresses" partyAddressesDecoder)
+            |> Decode.map
+                (\maybeList ->
+                    case maybeList of
+                        Just list ->
+                            list
+
+                        Nothing ->
+                            []
+                )
+        )
 
 
 partiesDecoder =
@@ -957,7 +953,7 @@ getParty maybeToken slug =
         { method = "GET"
         , url = Builder.absolute [ "api", "rpc", "edit_party" ] [ Builder.string "slug" slug ]
         , body = Http.emptyBody
-        , expect = Http.expectJson FullPartyLoaded completePartyDecoder
+        , expect = Http.expectJson PartyLoaded partyDecoder
         , headers = buildHeadersForOne maybeToken
         , timeout = Nothing
         , tracker = Nothing
@@ -997,8 +993,8 @@ partyKindEncoder kind =
     Encode.string val
 
 
-fullPartyEncoder : FullParty -> Encode.Value
-fullPartyEncoder party =
+partyEncoder : Party -> Encode.Value
+partyEncoder party =
     Encode.object
         [ ( "name", Encode.string party.name )
         , ( "kind", partyKindEncoder party.kind )
@@ -1006,13 +1002,13 @@ fullPartyEncoder party =
         ]
 
 
-saveFullParty : Maybe Token -> FullParty -> Cmd Msg
-saveFullParty maybeToken fullParty =
+saveParty : Maybe Token -> Party -> Cmd Msg
+saveParty maybeToken party =
     Http.request
         { method = "POST"
-        , url = "/api/rpc/save_full_party"
-        , body = Http.jsonBody (fullPartyEncoder fullParty)
-        , expect = Http.expectWhatever FullPartySaved
+        , url = "/api/rpc/save_party"
+        , body = Http.jsonBody (partyEncoder party)
+        , expect = Http.expectWhatever PartySaved
         , headers = buildHeadersForOne maybeToken ++ [ Http.header "Prefer" "params=single-object" ]
         , timeout = Nothing
         , tracker = Nothing
