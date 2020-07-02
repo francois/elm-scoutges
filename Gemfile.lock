@@ -27,7 +27,7 @@ GEM
       rspec-support (~> 3.9.0)
     rspec-support (3.9.2)
     rspec_tap (0.1.0)
-    sequel (5.33.0)
+    sequel (5.34.0)
     sequel_pg (1.13.0)
       pg (>= 0.18.0, != 1.2.0)
       sequel (>= 4.38.0)
