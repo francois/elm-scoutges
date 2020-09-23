@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/que-rb/que
-  revision: 94fee90195cdb38e946129e102a81a070692f952
+  revision: da0fd08d9d33aa469f172d07f45dc398c2244108
   branch: master
   specs:
     que (1.0.0.beta4)
