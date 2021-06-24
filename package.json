@@ -1,7 +1,7 @@
 {
   "license": "CC-BY-4.0",
   "devDependencies": {
-    "cypress": "^4.12.1",
+    "cypress": "^7.6.0",
     "mocha-tap-reporter": "^0.1.3"
   }
 }
